@@ -710,8 +710,8 @@
         {
             id: "wraa", category: "bat", title: "wRAA", full: "weighted Runs Above Average",
             short: "平均的な打者より「何点」多く取ったか。",
-            desc: "積み上げ指標。出場数が多く、かつ打撃成績が良いほど数値が高くなる。WARの打撃構成要素として使われる。",
-            formula: `(${formatVar('wOBA')} - リーグ平均wOBA) ÷ 1.24 × ${formatVar('打席')}`,
+            desc: "積み上げ指標。出場数が多く、かつ打撃成績が良いほど数値が高くなる。WARの打撃構成要素として使われる。<br>式中の<strong>wOBAScale（約1.24）</strong>は、wOBAを出塁率のスケール（.320前後が平均）に合わせるために掛けられていた係数を、得点単位に戻すために割るもの。",
+            formula: `(${formatVar('wOBA')} - リーグ平均wOBA) ÷ wOBAScale × ${formatVar('打席')}`,
             criteria: "0: 平均 / +20: 一流",
             related: ["war", "woba"]
         },
