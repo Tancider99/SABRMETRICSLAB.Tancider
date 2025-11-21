@@ -514,8 +514,10 @@
         LG_PA: 28500,
         LG_RUNS: 2800,
         LG_HITS: 6900,
-        LG_HR: 485,
-        LG_OPS: 0.65
+        LG_2B: 1300,  // 追加
+        LG_3B: 150,   // 追加
+        LG_HR: 485
+        // LG_OPS は削除
     };
 
     // Park Factors
@@ -542,6 +544,8 @@
             parseFloat(d.lg_pa) === DEFAULTS.LG_PA &&
             parseFloat(d.lg_runs) === DEFAULTS.LG_RUNS &&
             parseFloat(d.lg_hits) === DEFAULTS.LG_HITS &&
+            parseFloat(d.lg_2b) === DEFAULTS.LG_2B &&
+            parseFloat(d.lg_3b) === DEFAULTS.LG_3B &&
             parseFloat(d.lg_hr) === DEFAULTS.LG_HR
         );
 
@@ -567,11 +571,11 @@
         // 2. wOBA Scale Calculation
         const est_bb = d.lg_pa * 0.09; 
         const est_obp = (d.lg_hits + est_bb) / d.lg_pa; 
-        const non_hr_hits = d.lg_hits - d.lg_hr;
-        const est_1b = non_hr_hits * 0.75;
-        const est_2b = non_hr_hits * 0.20;
-        const est_3b = non_hr_hits * 0.05;
-        const raw_woba_numerator = (0.69 * est_bb) + (0.89 * est_1b) + (1.27 * est_2b) + (1.62 * est_3b) + (2.10 * d.lg_hr);
+        
+        // Use actual breakdown from inputs instead of estimates
+        const lg_1b = d.lg_hits - d.lg_2b - d.lg_3b - d.lg_hr;
+        
+        const raw_woba_numerator = (0.69 * est_bb) + (0.89 * lg_1b) + (1.27 * d.lg_2b) + (1.62 * d.lg_3b) + (2.10 * d.lg_hr);
         const lg_raw_woba = raw_woba_numerator / d.lg_pa;
         const woba_scale = est_obp / lg_raw_woba;
         const lg_woba = lg_raw_woba * woba_scale;
@@ -602,12 +606,13 @@
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
-                // Advanced Settings
+                // Advanced Settings (Updated)
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
-                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
+                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
+                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
             ],
             calc: (d) => {
                 const C = calcDerived(d);
@@ -653,12 +658,13 @@
                 {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
                 {id:'bb', label:'四球'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
-                // Advanced Settings
+                // Advanced Settings (Updated)
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
-                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
+                {id:'lg_2b', label:'リーグ総二塁打', type:'number', advanced:true, default: DEFAULTS.LG_2B},
+                {id:'lg_3b', label:'リーグ総三塁打', type:'number', advanced:true, default: DEFAULTS.LG_3B},
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
             ],
             calc: (d) => {
                 const C = calcDerived(d);
@@ -689,33 +695,43 @@
                 {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打'},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
-                // Advanced Settings
+                // Advanced Settings (Updated)
                 {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
                 {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS},
                 {id:'lg_hits', label:'リーグ総安打', type:'number', advanced:true, default: DEFAULTS.LG_HITS},
-                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR},
-                {id:'lg_ops', label:'リーグ平均OPS', type:'number', advanced:true, default: DEFAULTS.LG_OPS}
+                {id:'lg_hr', label:'リーグ総本塁打', type:'number', advanced:true, default: DEFAULTS.LG_HR}
+                // Pitching WAR doesn't strictly need 2B/3B for its simplified calculation here, but keeping consistent UI
+                // Removed LG_OPS as requested
             ],
             calc: (d) => {
                 const C = calcDerived(d);
+                
+                // 1. Calculate wOBA
+                const s = d.h - d.d - d.t - d.hr;
+                const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
+                
+                // 2. wRAA
+                const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
 
-                // 1. 簡易tRA
-                const raw_tra = ((13 * d.hr + 3 * d.bb - 2 * d.so) / d.ip) + 3.10;
-                
-                // 2. PF補正
+                // 3. Park Adj
                 const pf = PARK_FACTORS[d.stadium].pf;
-                const adj_tra = raw_tra / pf;
+                const parkAdj = (C.lg_r_pa - (pf * C.lg_r_pa)) * d.pa;
+                const battingRuns = raw_wRAA + parkAdj;
                 
-                // 3. SPRAR/RPRAR
-                let sprar = 0;
-                let rprar = 0;
-                if (d.role === 'sp') {
-                    sprar = (1.19 * C.lg_tra + 0.30 - adj_tra) / 9 * d.ip;
-                } else {
-                    rprar = (1.19 * C.lg_tra - 0.55 - adj_tra) / 9 * d.ip;
-                }
+                // 4. Pos Adj
+                const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
+                const posAdj = (posVals[d.pos] || 0) * (d.pa / 600);
                 
-                return ((sprar + rprar) / C.rpw).toFixed(1);
+                // 5. UZR & BaseRunning
+                const uzr = parseFloat(d.def) || 0;
+                const baseRunning = (d.sb * 0.2) || 0;
+                
+                // 6. Replacement Level
+                const repRuns = C.rep_per_pa * d.pa;
+                
+                // 7. Calc WAR
+                const totalRuns = battingRuns + uzr + baseRunning + posAdj + repRuns;
+                return (totalRuns / C.rpw).toFixed(1);
             }
         },
         {
