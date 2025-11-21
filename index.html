@@ -534,9 +534,6 @@
         </div>
     </div>
 
-    <!-- Hidden file input for OCR -->
-    <input type="file" id="ocr-input" accept="image/*" style="display: none;" onchange="processOCR(this)">
-
 <script>
     // --- Data Helper ---
     const formatVar = (text) => `<span class="var">${text}</span>`;
@@ -625,7 +622,7 @@
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'h', label:'安打'}, 
                 {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'},
+                {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}},
@@ -638,17 +635,38 @@
             ],
             calc: (d) => {
                 const C = calcDerived(d);
+                
+                // 1. Calculate wOBA
                 const s = d.h - d.d - d.t - d.hr;
                 const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
+                
+                // 2. wRAA (Raw)
                 const raw_wRAA = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
+
+                // 3. Park Adj (Updated Formula: 6-team league model)
                 const pf = PARK_FACTORS[d.stadium].pf;
-                const parkAdj = (C.lg_r_pa - (pf * C.lg_r_pa)) * d.pa;
+                // 補正係数 = (本拠地試合割合 × PF) + (敵地試合割合 × (6 - PF) / 5)
+                const home_ratio = 0.5;
+                const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
+                
+                // 補正値 = (1 - 補正係数) × リーグ平均R/PA × 打席
+                const parkAdj = (1 - pf_coef) * C.lg_r_pa * d.pa;
+                
                 const battingRuns = raw_wRAA + parkAdj;
+                
+                // 4. Pos Adj
                 const posVals = {'dh':-15.1, '1b':-14.1, 'lf':-12.0, 'rf':-5.0, '3b':-4.8, '2b':3.4, 'cf':4.2, 'ss':10.3, 'c':18.1};
                 const posAdj = (posVals[d.pos] || 0) * (d.pa / 600);
+                
+                // 5. UZR & BaseRunning
                 const uzr = parseFloat(d.def) || 0;
-                const baseRunning = (d.sb * 0.2) || 0;
+                // wSB概算: 盗塁(+0.2) - 盗塁死(-0.4)
+                const baseRunning = (d.sb * 0.2) - (d.cs * 0.4);
+                
+                // 6. Replacement Level
                 const repRuns = C.rep_per_pa * d.pa;
+                
+                // 7. Calc WAR
                 const totalRuns = battingRuns + uzr + baseRunning + posAdj + repRuns;
                 return (totalRuns / C.rpw).toFixed(1);
             }
@@ -657,7 +675,7 @@
             id: "wrc_plus", category: "bat", title: "wRC+", full: "weighted Runs Created Plus",
             short: "打撃の傑出度を評価する指標",
             desc: "打席あたりの得点創出の多さを平均的な打者を100とした場合のパーセンテージで評価する指標。",
-            formula: `(((wRAA/打席 + R/PA) + (R/PA - PF×R/PA)) ÷ R/PA) × 100`,
+            formula: `(((wRAA/打席 + R/PA) + (R/PA - PF補正係数×R/PA)) ÷ R/PA) × 100`,
             criteria: "100: 平均 / 160: MVP候補 / 200: 歴史的",
             related: ["woba", "wraa"],
             aiMode: true,
@@ -676,10 +694,24 @@
             calc: (d) => {
                 const C = calcDerived(d);
                 const pf = PARK_FACTORS[d.stadium].pf;
+                
+                // wOBA
                 const s = d.h - d.d - d.t - d.hr;
                 const woba_val = (0.69*d.bb + 0.89*s + 1.27*d.d + 1.62*d.t + 2.10*d.hr) / d.pa;
+                
+                // wRAA (Raw)
                 const raw_wraa = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
-                const wrc_plus_val = (((raw_wraa / d.pa) + C.lg_r_pa + (C.lg_r_pa - (pf * C.lg_r_pa))) / C.lg_r_pa) * 100;
+                
+                // Park Adj (New Formula)
+                const home_ratio = 0.5;
+                const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
+                const parkAdj = (1 - pf_coef) * C.lg_r_pa * d.pa;
+
+                // wRC+ Calc
+                // Numerator = (wRAA + ParkAdj) / PA + R/PA
+                // Denominator = R/PA
+                const wrc_plus_val = (((raw_wraa + parkAdj) / d.pa) + C.lg_r_pa) / C.lg_r_pa * 100;
+                
                 return wrc_plus_val.toFixed(0);
             }
         },
