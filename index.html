@@ -491,14 +491,14 @@
     // --- Data Helper ---
     const formatVar = (text) => `<span class="var">${text}</span>`;
 
-    // --- Constants (Default Values: Based on approx NPB 2023 averages) ---
+    // --- Constants (Default Values: Updated based on user request) ---
     const DEFAULTS = {
         // リーグ全体の統計（デフォルト値）
         LG_PA: 28500,
         LG_RUNS: 2800,
         LG_HITS: 6900,
         LG_HR: 485,
-        LG_OPS: 0.650
+        LG_OPS: 0.65
         // wOBA Scale は自動計算するため削除
     };
 
@@ -527,10 +527,7 @@
         const est_lg_ip = d.lg_pa / 4.25;
         const rpw = 20 * (d.lg_runs / est_lg_ip);
         
-        // 2. Replacement Level (Runs per PA) = 0.12 * (R/PA)
-        const rep_per_pa = 0.12 * lg_r_pa;
-
-        // 3. wOBA Scale Calculation: Scale = Lg_OBP / Lg_Raw_wOBA
+        // 2. wOBA Scale Calculation: Scale = Lg_OBP / Lg_Raw_wOBA
         // Since BB and XBH breakdowns are unknown, we estimate them using standard ratios.
         const est_bb = d.lg_pa * 0.09; // Assume 9% BB rate
         const est_obp = (d.lg_hits + est_bb) / d.lg_pa; // Simple OBP est
@@ -550,6 +547,9 @@
         
         // Lg wOBA (Scaled) for calculation
         const lg_woba = lg_raw_woba * woba_scale; // effectively est_obp
+
+        // 3. Replacement Level (Runs per PA) = 0.12 * (wOBA / wOBAscale)
+        const rep_per_pa = 0.12 * (lg_woba / woba_scale);
         
         // Lg tRA estimation (approx related to R/IP)
         const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
