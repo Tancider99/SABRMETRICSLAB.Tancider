@@ -1305,7 +1305,7 @@
             short: "守備の影響を除外した「真の防御率」。",
             desc: "投手の責任である三振・四球・被本塁打のみで評価する。防御率よりも将来の成績予測に役立つ。",
             formula: `(13×${formatVar('本塁打')} + 3×(${formatVar('四球')}+${formatVar('死球')}) - 2×${formatVar('三振')}) ÷ ${formatVar('投球回')} + 3.10`,
-            criteria: "防御率と同じ感覚で評価",
+            criteria: "防御率スケール",
             inputs: [{id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
             calc: (d) => ((13*d.hr + 3*(d.bb+d.hbp) - 2*d.so)/d.ip + 3.10).toFixed(2)
         },
@@ -1352,15 +1352,16 @@
         },
         {
             id: "siera", category: "pit", title: "SIERA", full: "Skill-Interactive Earned Run Average",
-            short: "打球の質や三振・四球を考慮した、FIPより精度の高い将来予測指標。",
+            short: "打球の質や三振・四球を考慮した、FIPより精度の高い指標。",
             desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出されます。<br>※選択された打球傾向から打球内訳（ゴロ・フライ等）を自動推定して計算します。",
             // formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + ...`,
             formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + 7.65((SO/PA)²) - 6.66(((GB-FB-PU)/PA)²) + 10.13(SO/PA)((GB-FB-PU)/PA) - 5.20(BB/PA)((GB-FB-PU)/PA)`,
-            criteria: "防御率スケール (3.00: 優秀)",
+            criteria: "失点率スケール (3.00: 優秀)",
             related: ["fip", "xfip", "tra"],
             aiMode: true,
             inputs: [
-                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hr', label:'被本塁打', advanced:true}, 
+                {id:'ip', label:'投球回'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, 
+                {id:'hr', label:'被本塁打'}, // 必須項目に変更 (advanced:trueを削除)
                 // 変更: 実数入力廃止 -> 傾向選択へ
                 {id:'gb_type', label:'打球傾向(GB%)', type:'select', options:{
                     '55':'55% (超ゴロP)', 
@@ -1369,14 +1370,14 @@
                     '40':'40% (フライP)', 
                     '35':'35% (超フライP)'
                 }},
-                {id:'bf', label:'打者数', advanced:true}
+                {id:'bf', label:'打者数'} // 必須項目に変更 (advanced:trueを削除)
             ],
             calc: (d) => {
                 // 打球内訳を推定
                 estimateBattedBalls(d);
 
                 const pa = d.bf;
-                // ゼロ除算防止
+                // ゼロ除算防止 (打者数(bf)が0の場合は計算不可)
                 if (!pa || pa === 0) return "---";
 
                 // SIERA計算 (Updated Formula)
@@ -1402,10 +1403,10 @@
         },
         {
             id: "tra", category: "pit", title: "tRA", full: "True Runs Allowed",
-            short: "打球の種類（ゴロ・フライ）も考慮した究極の指標。",
+            short: "打球の種類（ゴロ・フライなど）も考慮した指標。",
             desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。<br>※打球傾向から打球数を推定して計算します。",
             formula: `( (0.297×BB + 0.327×HBP - 0.108×SO + 1.401×HR + 0.036×GB - 0.124×PU + 0.132×FB + 0.289×LD) ÷ (SO + 0.745×GB + 0.304×LD + 0.994×PU + 0.675×FB) × 27 ) + 定数`,
-            criteria: "防御率スケール",
+            criteria: "失点率スケール",
             related: ["fip"],
             aiMode: true,
             inputs: [
@@ -1457,7 +1458,6 @@
                 // 通常tRAは失点率スケールだが、防御率スケールで表示したい場合は0.92を掛ける
                 // ユーザー定義の定数式がRA9スケールに合わせるものなので、
                 // 最終的に防御率感覚で評価したいならここで変換する。
-                // 今回はRA9スケール(失点率)としてそのまま出力する（FIP等と比較しやすいよう防御率換算する場合は * 0.92 を追加）
                 // ここではユーザー定義に従い、定数加算後の値をそのまま返します (RA9スケール)
                 return isFinite(val) ? val.toFixed(2) : "---";
             }
@@ -1941,7 +1941,12 @@
         term.inputs.forEach(inp => {
             const el = document.getElementById(`calc-${inp.id}`);
             const val = el.value;
-            if(val === '' && inp.type !== 'select') allFilled = false;
+            
+            // 必須入力のチェック (select以外でadvanced:trueが設定されていないもの)
+            const isBasicRequired = inp.type !== 'select' && !inp.advanced;
+            if (isBasicRequired && val === '') {
+                allFilled = false;
+            }
             
             if(inp.type === 'select') {
                 data[inp.id] = val;
@@ -1950,7 +1955,7 @@
             }
         });
 
-        if(!allFilled && !confirm("未入力の項目は0として計算しますか？")) return;
+        if(!allFilled && !confirm("未入力の必須項目は0として計算しますか？")) return;
 
         const result = term.calc(data);
         
