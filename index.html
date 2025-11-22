@@ -1424,7 +1424,7 @@
         {
             id: "rpw", category: "tot", title: "RPW", full: "Runs Per Win",
             short: "勝利を1つ増やすのに必要な得点数",
-            desc: "「1勝の重み」を得点換算したもの。,
+            desc: "「1勝の重み」を得点換算したもの。",
             formula: `20 × (リーグ総得点 ÷ リーグ総投球回)`,
             criteria: "約8.5 ～ 10.0",
             related: ["war", "pythag"],
@@ -1732,7 +1732,7 @@
         {
             id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
             short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版",
-            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算する。被本塁打の運要素を排除し、より純粋な実力を測る。,
+            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算する。被本塁打の運要素を排除し、より純粋な実力を測る。",
             formula: `(13 × (FB × LgHR/LgFB) + 3 × (BB - IBB + HBP) - 2 × SO) ÷ IP + 定数`,
             criteria: "防御率スケール",
             aiMode: true,
