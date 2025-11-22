@@ -1416,7 +1416,13 @@
                     '45':'45% (平均)', 
                     '40':'40% (フライP)', 
                     '35':'35% (超フライP)'
-                }}
+                }},
+                // 詳細入力
+                {id:'lg_hr', label:'リーグ総HR', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS}
             ],
             calc: (d) => {
                 estimateBattedBalls(d);
@@ -1442,12 +1448,17 @@
                 
                 if (denominator === 0) return "---";
 
-                // tRA Raw
+                // tRA Raw (Base value)
                 const tra_raw = (numerator / denominator) * 27;
                 
-                // 定数加算 (xFIP定数を流用してERAスケールへ補正)
-                const val = tra_raw + C.xfip_constant;
+                // 定数加算 (リーグRA9に合わせる補正)
+                const val = tra_raw + C.tra_constant;
                 
+                // 通常tRAは失点率スケールだが、防御率スケールで表示したい場合は0.92を掛ける
+                // ユーザー定義の定数式がRA9スケールに合わせるものなので、
+                // 最終的に防御率感覚で評価したいならここで変換する。
+                // 今回はRA9スケール(失点率)としてそのまま出力する（FIP等と比較しやすいよう防御率換算する場合は * 0.92 を追加）
+                // ここではユーザー定義に従い、定数加算後の値をそのまま返します (RA9スケール)
                 return isFinite(val) ? val.toFixed(2) : "---";
             }
         },
