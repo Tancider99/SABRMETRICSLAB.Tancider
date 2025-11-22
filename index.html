@@ -742,7 +742,7 @@
             inputs: [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球}, 
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, 
                 {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
 
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
@@ -1684,7 +1684,7 @@
     /* --- Batch Calculator Logic --- */
     function openBatchCalc(mode) {
         const isBat = mode === 'bat';
-        const title = isBat ? "野手指標 一括計算 (Batch Batter)" : "投手指標 一括計算 (Batch Pitcher)";
+        const title = isBat ? "野手指標 一括計算" : "投手指標 一括計算";
         const catColor = isBat ? getCatColor('bat') : getCatColor('pit');
         
         // Define input fields for batch mode
@@ -1693,9 +1693,9 @@
             fields = [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'},
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, {id:'so', label:'三振', default:0},
-                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
-                {id:'sb', label:'盗塁', default:0}, {id:'cs', label:'盗塁死', default:0},
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'so', label:'三振'},
+                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
+                {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}}
@@ -1703,9 +1703,9 @@
         } else {
             fields = [
                 {id:'ip', label:'投球回'}, {id:'er', label:'自責点'}, {id:'r', label:'失点'},
-                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球', default:0},
+                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'},
                 {id:'so', label:'奪三振'}, 
-                {id:'gb', label:'ゴロ', default:0}, {id:'fb', label:'フライ', default:0}, {id:'pu', label:'内野フライ', default:0},
+                {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}, {id:'pu', label:'内野フライ'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}}
             ];
