@@ -590,19 +590,25 @@
         const lg_sf = d.lg_sf !== undefined ? d.lg_sf : DEFAULTS.LG_SF;
         const lg_sh = d.lg_sh !== undefined ? d.lg_sh : DEFAULTS.LG_SH;
 
-        // 固定値を返す判定ロジック (isDefault) を削除しました。
-        // すべて入力値に基づき動的に計算されます。
-
         // --- リーグ詳細データの計算 ---
         const lg_ibb = lg_bb * 0.03; 
         const lg_roe = Math.max(0, d.lg_pa - (lg_ab + lg_bb + lg_hbp + lg_sf + lg_sh));
         const lg_1b = d.lg_hits - d.lg_2b - d.lg_3b - lg_hr;
         const lg_obp = (d.lg_hits + lg_bb + lg_hbp) / (lg_ab + lg_bb + lg_hbp + lg_sf);
 
+        // 推定: リーグ三振数 (PAの約18%)
+        const lg_so = d.lg_pa * 0.18;
+        
+        // 推定: リーグ打球数 (Batted Balls)
+        // Batted Balls = PA - BB - HBP - SO
+        const lg_batted = d.lg_pa - lg_bb - lg_hbp - lg_so;
+        
+        // 推定: リーグ外野フライ数 (ユーザー指定: FB% 45%, GB% 45%, LD% 10%)
+        const lg_fb = lg_batted * 0.45; // 変更: 36% -> 45%
+
         // --- wOBA計算 (基準係数: wOBA Scale=1.28想定) ---
         const woba_denom = lg_ab + lg_bb - lg_ibb + lg_hbp + lg_sf;
         
-        // 基準係数でのリーグwOBA算出
         const woba_num_std = 
             0.692 * (lg_bb - lg_ibb) +
             0.73  * lg_hbp +
@@ -615,14 +621,10 @@
         const lg_woba_std = woba_denom > 0 ? woba_num_std / woba_denom : 0;
 
         // --- 係数補正比率 (Fitting Ratio) ---
-        // リーグ出塁率と基準wOBAの比率から、環境に合わせた係数の補正倍率を算出
         const fitting_ratio = (lg_woba_std > 0 && lg_obp > 0) ? (lg_obp / lg_woba_std) : 1.0;
-
-        // 実際のリーグwOBA (OBPと一致するように補正される)
         const lg_woba = lg_woba_std * fitting_ratio;
 
-        // --- wOBA Scaleの計算 ---
-        // 基準値1.28に補正倍率を掛ける
+        // --- wOBA Scale ---
         const woba_scale = 1.28 * fitting_ratio;
 
         // --- その他パラメータ ---
@@ -631,10 +633,23 @@
         const rpw = 20 * (d.lg_runs / est_lg_ip);
         const rep_per_pa = 0.12 * (lg_woba / woba_scale);
         
-        // tRAの計算 (固定値を使用せず計算)
         const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
 
-        return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio };
+        // --- xFIP定数 & 比率の計算 (ユーザー指定式) ---
+        // 比率 = 本塁打 ÷ (外野フライ + 本塁打)
+        const lg_xfip_ratio = lg_hr / (lg_fb + lg_hr);
+        
+        // リーグ失点率 (RA9)
+        const lg_ra9 = (d.lg_runs / est_lg_ip) * 9;
+        
+        // xFIPのリーグ成分
+        // (13 * (Ratio) * Lg_FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP
+        const lg_xfip_component = (13 * lg_xfip_ratio * lg_fb + 3 * (lg_bb - lg_ibb + lg_hbp) - 2 * lg_so) / est_lg_ip;
+        
+        // 定数 = リーグ失点率 - リーグxFIP成分
+        const xfip_constant = lg_ra9 - lg_xfip_component;
+
+        return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio, xfip_constant, lg_xfip_ratio };
     }
 
     // --- Helper: 詳細スタッツの計算 (Calculate Details from Inputs) ---
@@ -1153,13 +1168,25 @@
         {
             id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
             short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版。",
-            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値（約10.5%）に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。",
-            formula: `(13×(FB×0.105) + 3×(BB+HBP) - 2×SO) ÷ IP + 3.10`,
+            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。<br>計算式: (13×予想HR + 3×(四球-故意四球+死球) - 2×三振)÷IP + 定数",
+            formula: `(13×(LgHR/LgFB%)×FB + 3×(BB-IBB+HBP) - 2×SO) ÷ IP + 定数`,
             criteria: "防御率スケール",
             inputs: [{id:'fb', label:'フライ数'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
             calc: (d) => {
-                // xFIP Constant approx 3.10, HR/FB approx 10.5%
-                return ((13 * (d.fb * 0.105) + 3 * (d.bb + d.hbp) - 2 * d.so) / d.ip + 3.10).toFixed(2);
+                const C = calcDerived(d);
+                // 故意四球の推定 (四球の約4%)
+                const est_ibb = d.bb * 0.04;
+                
+                // ユーザー指定式:
+                // xFIP = (13 * (Lg_HR / (Lg_FB + Lg_HR)) * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + Constant
+                
+                const term1 = 13 * C.lg_xfip_ratio * d.fb;
+                const term2 = 3 * (d.bb - est_ibb + d.hbp);
+                const term3 = 2 * d.so;
+                
+                const val = (term1 + term2 - term3) / d.ip + C.xfip_constant;
+                
+                return val.toFixed(2);
             }
         },
         {
@@ -1306,7 +1333,10 @@
             short: "守備による失点防止量（平均比）。",
             desc: "1.02などで採用される守備指標のスタンダード。グラウンドをゾーンに分割し、打球ごとの処理難易度に応じて貢献度を算出する。",
             formula: "加点方式",
-            criteria: "0: 平均 / +15: ゴールドグラブ"
+            criteria: "0: 平均 / +15: ゴールドグラブ",
+            // 入力された守備評価(def)をそのまま返す簡易実装
+            inputs: [{id:'def', label:'守備評価'}], 
+            calc: (d) => d.def ? parseFloat(d.def).toFixed(1) : "---"
         },
         {
             id: "der", category: "fld", title: "DER", full: "Defensive Efficiency Ratio",
@@ -1367,7 +1397,7 @@
             formula: `${formatVar('投球数')} ÷ ${formatVar('投球回')}`,
             criteria: "15球以下: 省エネ",
             inputs: [{id:'np', label:'球数'}, {id:'ip', label:'投球回'}],
-            calc: (d) => (d.np / d.ip).toFixed(1)
+            calc: (d) => d.np > 0 ? (d.np / d.ip).toFixed(1) : "---"
         },
         {
             id: "rsaa", category: "pit", title: "RSAA", full: "Runs Saved Above Average",
@@ -1376,7 +1406,20 @@
             formula: `(リーグ平均防御率 - ${formatVar('防御率')}) × ${formatVar('投球回')} ÷ 9`,
             criteria: "プラスなら平均以上",
             inputs: [{id:'lg_era', label:'L平均防御率'}, {id:'era', label:'防御率'}, {id:'ip', label:'投球回'}],
-            calc: (d) => ((d.lg_era - d.era) * d.ip / 9).toFixed(1)
+            calc: (d) => {
+                // リーグ平均防御率がない場合は詳細設定から推定
+                let lg_era = d.lg_era;
+                if (!lg_era) {
+                    // LgRA9 = LgRuns / (LgPA / 4.25) * 9
+                    // LgERA ≈ LgRA9 * 0.92
+                    const est_lg_ip = d.lg_pa / 4.25;
+                    const lg_ra9 = (d.lg_runs / est_lg_ip) * 9;
+                    lg_era = lg_ra9 * 0.92;
+                }
+                // 自チーム防御率
+                const my_era = d.era ? d.era : (d.er * 9 / d.ip);
+                return ((lg_era - my_era) * d.ip / 9).toFixed(1);
+            }
         }
     ];
 
@@ -1702,7 +1745,7 @@
     /* --- Batch Calculator Logic --- */
     function openBatchCalc(mode) {
         const isBat = mode === 'bat';
-        const title = isBat ? "野手指標 一括計算 (Batch Batter)" : "投手指標 一括計算 (Batch Pitcher)";
+        const title = isBat ? "野手指標 一括計算" : "投手指標 一括計算";
         const catColor = isBat ? getCatColor('bat') : getCatColor('pit');
         
         // Define input fields for batch mode
@@ -1711,19 +1754,20 @@
             fields = [
                 {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
                 {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'},
-                {id:'bb', label:'四球'}, {id:'hbp', label:'死球', default:0}, {id:'so', label:'三振', default:0},
-                {id:'sf', label:'犠飛', default:0}, {id:'sh', label:'犠打', default:0},
-                {id:'sb', label:'盗塁', default:0}, {id:'cs', label:'盗塁死', default:0},
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'so', label:'三振'},
+                {id:'sf', label:'犠飛'}, {id:'sh', label:'犠打'},
+                {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'pos', label:'守備位置', type:'select', options:{'dh':'DH', '1b':'一塁', 'lf':'左翼', 'rf':'右翼', '3b':'三塁', '2b':'二塁', 'cf':'中堅', 'ss':'遊撃', 'c':'捕手'}},
                 {id:'def', label:'守備評価', type:'select', options:{'0':'平均的 (0)', '5':'上手い (+5)', '10':'名手 (+10)', '15':'神 (+15)', '-5':'苦手 (-5)', '-10':'下手 (-10)'}}
             ];
         } else {
             fields = [
-                {id:'ip', label:'投球回'}, {id:'er', label:'自責点'}, {id:'r', label:'失点'},
-                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球', default:0},
-                {id:'so', label:'奪三振'}, 
-                {id:'gb', label:'ゴロ', default:0}, {id:'fb', label:'フライ', default:0}, {id:'pu', label:'内野フライ', default:0},
+                {id:'ip', label:'投球回'}, {id:'r', label:'失点'},
+                {id:'h', label:'被安打'}, {id:'hr', label:'被本塁打'}, 
+                {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'},
+                {id:'so', label:'奪三振'}, {id:'bf', label:'打者数'}, // 追加: K%, BB%用
+                {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}, {id:'pu', label:'内野フライ'},
                 {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
                 {id:'role', label:'役割', type:'select', options:{'sp':'先発', 'rp':'救援'}}
             ];
@@ -1811,26 +1855,14 @@
         // Calculate Indicators
         let results = [];
         
-        terms.forEach(term => {
-            // Check if this term belongs to the current mode (category check)
-            // bat/std/fld/tot for Batters
-            // pit/std/tot for Pitchers
-            let isRelevant = false;
-            if (isBat) {
-                if (['bat', 'std', 'fld', 'tot'].includes(term.category)) isRelevant = true;
-                // Exclude pitching specific terms even if in 'tot' or 'std' (like ERA)
-                if (term.id === 'era' || term.id === 'whip' || term.category === 'pit') isRelevant = false;
-                // Special case: WAR is relevant
-                if (term.id === 'pit_war') isRelevant = false;
-            } else {
-                if (['pit', 'std', 'tot'].includes(term.category)) isRelevant = true;
-                // Exclude batting specific
-                if (['bat', 'fld'].includes(term.category)) isRelevant = false;
-                if (term.id === 'war') isRelevant = false; // Exclude Batter WAR
-                // Include basics like ERA, WHIP
-            }
+        // ユーザー指定の指標IDリスト
+        const targetIds = isBat ? 
+            ['war', 'wrc_plus', 'woba', 'iso', 'babip', 'k_pct', 'bb_pct'] : 
+            ['pit_war', 'fip', 'xfip', 'siera', 'k_pct_pit', 'bb_pct_pit'];
 
-            if (isRelevant && term.calc) {
+        terms.forEach(term => {
+            // 指定されたIDの指標のみ計算・表示する
+            if (targetIds.includes(term.id) && term.calc) {
                 try {
                     // Check if we have necessary inputs? 
                     // term.calc will run with 0s if missing, which is acceptable for batch
@@ -1914,9 +1946,34 @@
                 text += `${metric}: ${value}\n`;
             }
         });
-        navigator.clipboard.writeText(text).then(() => {
-            alert("クリップボードにコピーしました！");
-        });
+
+        // Fallback approach for iframe/sandbox environments
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        
+        // Avoid scrolling to bottom
+        textArea.style.top = "0";
+        textArea.style.left = "0";
+        textArea.style.position = "fixed";
+        textArea.style.opacity = "0";
+
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+
+        try {
+            const successful = document.execCommand('copy');
+            if(successful) {
+                alert("クリップボードにコピーしました！");
+            } else {
+                alert("コピーに失敗しました。");
+            }
+        } catch (err) {
+            console.error('Fallback: Oops, unable to copy', err);
+            alert("コピーに失敗しました。");
+        }
+
+        document.body.removeChild(textArea);
     }
 
     /* --- Preset Logic (LocalStorage) --- */
