@@ -1258,7 +1258,7 @@
         {
             id: "war", category: "tot", title: "WAR (野手)", full: "Wins Above Replacement (Batter)",
             short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べ、どれだけ勝利数を増やしたかによって計算される。<br>wOBA係数はリーグ環境（wOBA Scale）に合わせて自動補正される",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べ、どれだけ勝利数を増やしたかによって計算される。",
             formula: `(wRAA + UZR + BaseRunning + ポジション補正 + 代替水準補正) ÷ RPW`,
             criteria: "2.0: レギュラー / 5.0: スター / 8.0: MVP",
             related: ["wraa", "uzr", "woba", "rpw"],
@@ -1424,9 +1424,9 @@
         {
             id: "rpw", category: "tot", title: "RPW", full: "Runs Per Win",
             short: "勝利を1つ増やすのに必要な得点数",
-            desc: "「1勝の重み」を得点換算したもの。デフォルトでは8.5に設定されている",
+            desc: "「1勝の重み」を得点換算したもの。,
             formula: `20 × (リーグ総得点 ÷ リーグ総投球回)`,
-            criteria: "8.5 ～ 10.0",
+            criteria: "約8.5 ～ 10.0",
             related: ["war", "pythag"],
             inputs: [
                 {id:'lg_runs', label:'リーグ総得点'},
@@ -1441,7 +1441,7 @@
         {
             id: "wpa", category: "tot", title: "WPA", full: "Win Probability Added",
             short: "勝利確率をどれだけ変動させたかを示す",
-            desc: "状況（点差、イニング、走者、アウト）ごとの勝利確率を、プレイ前後でどれだけ増やしたかによって評価する。勝負強さを測るのに最適で、サヨナラホームランなどは非常に高い値になる",
+            desc: "状況（点差、イニング、走者、アウト）ごとの勝利確率を、プレイ前後でどれだけ増やしたかによって評価する。サヨナラホームランなどは非常に高い値になる",
             formula: `プレイ後の勝利確率 - プレイ前の勝利確率`,
             criteria: "状況に依存",
             related: ["re24"]
@@ -1449,7 +1449,7 @@
         {
             id: "re24", category: "tot", title: "RE24", full: "Run Expectancy 24",
             short: "状況別の「得点期待値」の増減を示す",
-            desc: "24種類の状況（無死一塁など）における得点期待値をどれだけ改善させたかを測る。打点などより文脈を正確に反映する",
+            desc: "24種類の状況（無死一塁など）における得点期待値をどれだけ改善させたかを測る。",
             formula: `プレイ後期待値 - プレイ前期待値 + 得点`,
             criteria: "0: 平均",
             related: ["wpa"]
@@ -1472,7 +1472,7 @@
             id: "pf", category: "tot", title: "PF", full: "Park Factor",
             short: "球場の特性（打者有利/投手有利）を表す数値",
             desc: "1.00が平均。1.00より大きければ打者有利、小さければ投手有利とされる。セイバーメトリクスでは、選手の成績を比較する際にこのPF補正をかけることが常識となっている",
-            formula: `(本拠地での本塁打 + 被本塁打) ÷ (敵地での本塁打 + 被本塁打)`,
+            formula: `(本拠地での試合あたり得点 + 失点) ÷ (本拠地以外での試合あたり得点 + 失点)`,
             criteria: "1.00: 中立 / 1.20: ヒッターズパーク",
             related: ["wrc_plus"]
         },
@@ -1526,7 +1526,7 @@
         {
             id: "woba", category: "bat", title: "wOBA", full: "weighted On-Base Average",
             short: "各イベントを得点価値で重み付けした「真の出塁率」",
-            desc: "OPSの欠点（出塁率を過小評価している点）を修正し、各イベント（単打、本塁打、四球など）が得点にどれだけ貢献したかを係数化して計算する。係数は年度ごとに変動する",
+            desc: "OPSの欠点を修正し、各イベント（単打、本塁打、四球など）が得点にどれだけ貢献したかを係数化して計算する。係数は年度ごとに変動する",
             formula: `(0.69×${formatVar('四球')} + 0.72×${formatVar('死球')} + 0.89×${formatVar('単打')} + 1.27×${formatVar('二塁打')} + 1.62×${formatVar('三塁打')} + 2.10×${formatVar('本塁打')}) ÷ ${formatVar('打席')}`,
             criteria: ".320: 平均 / .400: MVP級",
             related: ["ops", "wrc_plus"],
@@ -1580,7 +1580,7 @@
         {
             id: "babip", category: "bat", title: "BABIP", full: "Batting Average on Balls In Play",
             short: "インプレー打球のヒット率（運の指標）",
-            desc: "本塁打以外のフェアゾーンに飛んだ打球がヒットになった割合。極端に高い/低い場合は「運」や「守備」の影響が強く、翌年は平均（約.300）に近づく傾向がある",
+            desc: "本塁打以外のフェアゾーンに飛んだ打球がヒットになった割合。極端に高い/低い場合は「運」や「守備」の影響が強い",
             formula: `(${formatVar('安打')}-${formatVar('本塁打')}) ÷ (${formatVar('打数')}-${formatVar('三振')}-${formatVar('本塁打')}+${formatVar('犠飛')})`,
             criteria: ".300前後が基準",
             inputs: [{id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, {id:'ab', label:'打数'}, {id:'so', label:'三振'}, {id:'sf', label:'犠飛'}],
@@ -1644,7 +1644,7 @@
         {
             id: "xr", category: "bat", title: "XR", full: "Extrapolated Runs",
             short: "各プレーに得点価値係数を掛けて算出する得点力",
-            desc: "RCと似ているが、より各イベント（単打0.5点、本塁打1.44点など）の得点貢献を線形的に足し合わせて評価する、日本で人気の指標",
+            desc: "RCと似ているが、より各イベント（単打0.5点、本塁打1.44点など）の得点貢献を線形的に足し合わせて評価する指標",
             formula: `0.5×${formatVar('単打')} + 0.72×${formatVar('二塁打')} + 1.44×${formatVar('HR')} + 0.34×(${formatVar('四球')}+${formatVar('死球')})...`,
             criteria: "RC27と同様に評価可能",
             related: ["rc27"],
@@ -1696,7 +1696,7 @@
         {
             id: "noi", category: "bat", title: "NOI", full: "New Offensive Index",
             short: "出塁率＋長打率÷3",
-            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標",
+            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。",
             formula: `(${formatVar('出塁率')} + ${formatVar('長打率')} ÷ 3) × 1000`,
             criteria: "450: 平均 / 550: 優秀",
             inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
@@ -1732,7 +1732,7 @@
         {
             id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
             short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版",
-            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算する。被本塁打の運要素を排除し、より純粋な実力を測る。<br>※選択された打球傾向（ゴロ率）からフライ数を自動推定して計算する",
+            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算する。被本塁打の運要素を排除し、より純粋な実力を測る。,
             formula: `(13 × (FB × LgHR/LgFB) + 3 × (BB - IBB + HBP) - 2 × SO) ÷ IP + 定数`,
             criteria: "防御率スケール",
             aiMode: true,
@@ -1770,7 +1770,7 @@
         {
             id: "siera", category: "pit", title: "SIERA", full: "Skill-Interactive Earned Run Average",
             short: "打球の質や三振・四球を考慮した、FIPより精度の高い指標",
-            desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出される。<br>※選択された打球傾向から打球内訳（ゴロ・フライ等）を自動推定して計算する",
+            desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出される。",
             // formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + ...`,
             formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + 7.65((SO/PA)²) - 6.66(((GB-FB-PU)/PA)²) + 10.13(SO/PA)((GB-FB-PU)/PA) - 5.20(BB/PA)((GB-FB-PU)/PA)`,
             criteria: "失点率スケール (3.00: 優秀)",
@@ -1824,7 +1824,7 @@
         {
             id: "tra", category: "pit", title: "tRA", full: "True Runs Allowed",
             short: "打球の種類（ゴロ・フライなど）も考慮した指標",
-            desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。<br>※打球傾向から打球数を推定して計算する",
+            desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。",
             formula: `( (0.297×BB + 0.327×HBP - 0.108×SO + 1.401×HR + 0.036×GB - 0.124×PU + 0.132×FB + 0.289×LD) ÷ (SO + 0.745×GB + 0.304×LD + 0.994×PU + 0.675×FB) × 27 ) + 定数`,
             criteria: "失点率スケール",
             related: ["fip"],
@@ -1973,7 +1973,7 @@
         {
             id: "der", category: "fld", title: "DER", full: "Defensive Efficiency Ratio",
             short: "本塁打以外のインプレー打球をアウトにした割合",
-            desc: "チーム全体の守備力を測る指標。BABIPの逆数に近い概念",
+            desc: "チーム全体の守備力を測る指標。1-被BABIP",
             formula: `1 - ((${formatVar('被安打')} - ${formatVar('被HR')}) ÷ (${formatVar('打者')} - ${formatVar('三振')} - ${formatVar('四球')} - ${formatVar('死球')} - ${formatVar('被HR')}))`,
             criteria: ".700前後が平均",
             inputs: [{id:'h', label:'被安打'}, {id:'hr', label:'被HR'}, {id:'bf', label:'打者数'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}],
@@ -1981,7 +1981,7 @@
         },
         {
             id: "drs", category: "fld", title: "DRS", full: "Defensive Runs Saved",
-            short: "UZRと並ぶ守備指標の決定版",
+            short: "UZRと並ぶ守備指標",
             desc: "UZRと同様のコンセプトだが、測定方法が異なる。MLBではUZRと共にゴールドグラブ賞の選考基準となる",
             formula: "加点方式",
             criteria: "+15以上: 最高レベル"
