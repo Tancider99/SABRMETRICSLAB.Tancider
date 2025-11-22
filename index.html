@@ -581,30 +581,37 @@
 
     // --- Helper to calculate Derived Constants ---
     function calcDerived(d) {
-        // 基本入力値
-        const lg_hr = DEFAULTS.LG_HR;
-        const lg_bb = d.lg_bb !== undefined ? d.lg_bb : DEFAULTS.LG_BB;
-        // 新規詳細パラメータ
-        const lg_ab = d.lg_ab !== undefined ? d.lg_ab : DEFAULTS.LG_AB;
-        const lg_hbp = d.lg_hbp !== undefined ? d.lg_hbp : DEFAULTS.LG_HBP;
-        const lg_sf = d.lg_sf !== undefined ? d.lg_sf : DEFAULTS.LG_SF;
-        const lg_sh = d.lg_sh !== undefined ? d.lg_sh : DEFAULTS.LG_SH;
+        // 基本入力値 (修正: 入力が0や空の場合はデフォルト値を使用するように || 演算子に変更)
+        const lg_hr = d.lg_hr || DEFAULTS.LG_HR;
+        const lg_bb = d.lg_bb || DEFAULTS.LG_BB;
+        // 詳細パラメータ
+        const lg_ab = d.lg_ab || DEFAULTS.LG_AB;
+        const lg_hbp = d.lg_hbp || DEFAULTS.LG_HBP;
+        const lg_sf = d.lg_sf || DEFAULTS.LG_SF;
+        const lg_sh = d.lg_sh || DEFAULTS.LG_SH;
+        
+        // その他のリーグ統計も同様に安全策をとる
+        const lg_pa = d.lg_pa || DEFAULTS.LG_PA;
+        const lg_runs = d.lg_runs || DEFAULTS.LG_RUNS;
+        const lg_hits = d.lg_hits || DEFAULTS.LG_HITS;
+        const lg_2b = d.lg_2b || DEFAULTS.LG_2B;
+        const lg_3b = d.lg_3b || DEFAULTS.LG_3B;
 
         // --- リーグ詳細データの計算 ---
         const lg_ibb = lg_bb * 0.03; 
-        const lg_roe = Math.max(0, d.lg_pa - (lg_ab + lg_bb + lg_hbp + lg_sf + lg_sh));
-        const lg_1b = d.lg_hits - d.lg_2b - d.lg_3b - lg_hr;
-        const lg_obp = (d.lg_hits + lg_bb + lg_hbp) / (lg_ab + lg_bb + lg_hbp + lg_sf);
+        const lg_roe = Math.max(0, lg_pa - (lg_ab + lg_bb + lg_hbp + lg_sf + lg_sh));
+        const lg_1b = lg_hits - lg_2b - lg_3b - lg_hr;
+        const lg_obp = (lg_hits + lg_bb + lg_hbp) / (lg_ab + lg_bb + lg_hbp + lg_sf);
 
         // 推定: リーグ三振数 (PAの約18%)
-        const lg_so = d.lg_pa * 0.18;
+        const lg_so = lg_pa * 0.18;
         
         // 推定: リーグ打球数 (Batted Balls)
         // Batted Balls = PA - BB - HBP - SO
-        const lg_batted = d.lg_pa - lg_bb - lg_hbp - lg_so;
+        const lg_batted = lg_pa - lg_bb - lg_hbp - lg_so;
         
         // 推定: リーグ外野フライ数 (ユーザー指定: FB% 45%, GB% 45%, LD% 10%)
-        const lg_fb = lg_batted * 0.45; // 変更: 36% -> 45%
+        const lg_fb = lg_batted * 0.45;
 
         // --- wOBA計算 (基準係数: wOBA Scale=1.28想定) ---
         const woba_denom = lg_ab + lg_bb - lg_ibb + lg_hbp + lg_sf;
@@ -614,8 +621,8 @@
             0.73  * lg_hbp +
             0.966 * lg_roe +
             0.865 * lg_1b +
-            1.334 * d.lg_2b +
-            1.725 * d.lg_3b +
+            1.334 * lg_2b +
+            1.725 * lg_3b +
             2.065 * lg_hr;
             
         const lg_woba_std = woba_denom > 0 ? woba_num_std / woba_denom : 0;
@@ -628,26 +635,29 @@
         const woba_scale = 1.28 * fitting_ratio;
 
         // --- その他パラメータ ---
-        const lg_r_pa = d.lg_runs / d.lg_pa;
-        const est_lg_ip = d.lg_pa / 4.25;
-        const rpw = 20 * (d.lg_runs / est_lg_ip);
+        const lg_r_pa = lg_runs / lg_pa;
+        const est_lg_ip = lg_pa / 4.25;
+        const rpw = 20 * (lg_runs / est_lg_ip);
         const rep_per_pa = 0.12 * (lg_woba / woba_scale);
         
-        const lg_tra = (d.lg_runs / est_lg_ip) * 9 * 0.92;
+        const lg_tra = (lg_runs / est_lg_ip) * 9 * 0.92;
 
-        // --- xFIP定数 & 比率の計算 (ユーザー指定式) ---
-        // 比率 = 本塁打 ÷ (外野フライ + 本塁打)
-        const lg_xfip_ratio = lg_hr / (lg_fb + lg_hr);
+        // --- xFIP定数 & 比率の計算 ---
+        
+        // 比率 = 本塁打 ÷ 外野フライ
+        const lg_xfip_ratio = lg_hr / lg_fb;
         
         // リーグ失点率 (RA9)
-        const lg_ra9 = (d.lg_runs / est_lg_ip) * 9;
+        const lg_ra9 = (lg_runs / est_lg_ip) * 9;
+        
+        // リーグ防御率 (ERA) 推定 (RA9の約92%)
+        const lg_era_est = lg_ra9 * 0.92;
         
         // xFIPのリーグ成分
-        // (13 * (Ratio) * Lg_FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP
         const lg_xfip_component = (13 * lg_xfip_ratio * lg_fb + 3 * (lg_bb - lg_ibb + lg_hbp) - 2 * lg_so) / est_lg_ip;
         
-        // 定数 = リーグ失点率 - リーグxFIP成分
-        const xfip_constant = lg_ra9 - lg_xfip_component;
+        // 定数 = リーグ防御率 - リーグxFIP成分
+        const xfip_constant = lg_era_est - lg_xfip_component;
 
         return { lg_r_pa, rpw, rep_per_pa, lg_woba, lg_tra, woba_scale, fitting_ratio, xfip_constant, lg_xfip_ratio };
     }
@@ -1169,17 +1179,25 @@
             id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
             short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版。",
             desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。<br>計算式: (13×予想HR + 3×(四球-故意四球+死球) - 2×三振)÷IP + 定数",
-            formula: `(13×(LgHR/LgFB%)×FB + 3×(BB-IBB+HBP) - 2×SO) ÷ IP + 定数`,
+            // formula: `(13×(LgHR/LgFB%)×FB + 3×(BB-IBB+HBP) - 2×SO) ÷ IP + 定数`,
+            formula: `(13 × (FB × LgHR/LgFB) + 3 × (BB - IBB + HBP) - 2 × SO) ÷ IP + 定数`,
             criteria: "防御率スケール",
-            inputs: [{id:'fb', label:'フライ数'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
+            aiMode: true,
+            inputs: [
+                {id:'fb', label:'フライ数'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'},
+                // 詳細入力: xFIP計算に必要なリーグ定数
+                {id:'lg_hr', label:'リーグ総HR', type:'number', advanced:true, default: DEFAULTS.LG_HR},
+                {id:'lg_pa', label:'リーグ総打席', type:'number', advanced:true, default: DEFAULTS.LG_PA},
+                {id:'lg_bb', label:'リーグ総四球', type:'number', advanced:true, default: DEFAULTS.LG_BB},
+                {id:'lg_hbp', label:'リーグ総死球', type:'number', advanced:true, default: DEFAULTS.LG_HBP},
+                {id:'lg_runs', label:'リーグ総得点', type:'number', advanced:true, default: DEFAULTS.LG_RUNS}
+            ],
             calc: (d) => {
                 const C = calcDerived(d);
                 // 故意四球の推定 (四球の約4%)
                 const est_ibb = d.bb * 0.04;
                 
-                // ユーザー指定式:
-                // xFIP = (13 * (Lg_HR / (Lg_FB + Lg_HR)) * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + Constant
-                
+                // xFIP = (13 * (Lg_HR / Lg_FB) * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + Constant
                 const term1 = 13 * C.lg_xfip_ratio * d.fb;
                 const term2 = 3 * (d.bb - est_ibb + d.hbp);
                 const term3 = 2 * d.so;
@@ -1302,12 +1320,6 @@
         },
         
         /* ---------------- 投球 (Pitching) ---------------- */
-        {
-            id: "era", category: "std", title: "ERA", full: "Earned Run Average",
-            criteria: "10%: 平均",
-            inputs: [{id:'ld', label:'ライナー'}, {id:'gb', label:'ゴロ'}, {id:'fb', label:'フライ'}],
-            calc: (d) => (d.ld / (d.ld + d.gb + d.fb) * 100).toFixed(1) + '%'
-        },
         {
             id: "gb_pct", category: "pit", title: "GB%", full: "Ground Ball Percentage",
             short: "全打球に占めるゴロの割合。",
@@ -1538,12 +1550,17 @@
             `;
         } else {
             // Handle default value if present
-            const defaultVal = inp.default !== undefined ? inp.default : '';
+            // 修正: デフォルト値が0の場合はvalue属性に入れない（空欄にしてプレースホルダーを表示）
+            let val = '';
+            if (inp.default !== undefined) {
+                val = inp.default === 0 ? '' : inp.default;
+            }
+            
             const advClass = inp.advanced ? 'advanced-input' : '';
             return `
                 <div class="calc-group">
                     <label class="calc-label">${inp.label}</label>
-                    <input type="number" class="calc-field ${advClass}" id="calc-${inp.id}" placeholder="0" value="${defaultVal}" ${inp.advanced ? 'oninput="checkAdvancedChanges()"' : ''}>
+                    <input type="number" class="calc-field ${advClass}" id="calc-${inp.id}" placeholder="0" value="${val}" ${inp.advanced ? 'oninput="checkAdvancedChanges()"' : ''}>
                 </div>
             `;
         }
