@@ -24,9 +24,9 @@
             --data-source-color: #4b5563;
             --ai-color: #8b5cf6;
             
-            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-            --shadow-float: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+            --shadow-card: 0 6px 15px -3px rgba(0, 0, 0, 0.08), 0 3px 6px -2px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 12px 25px -5px rgba(0, 0, 0, 0.15), 0 5px 10px -5px rgba(0, 0, 0, 0.08);
+            --shadow-float: 0 20px 50px -10px rgba(0, 0, 0, 0.2);
 
             --font-sans: "Inter", "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
             --font-mono: "JetBrains Mono", "Fira Code", Consolas, monospace;
@@ -47,8 +47,8 @@
             --bg-tot: rgba(16, 185, 129, 0.15);
             --bg-std: rgba(99, 102, 241, 0.15);
             
-            --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
-            --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            --shadow-card: 0 6px 15px -3px rgba(0, 0, 0, 0.4), 0 3px 6px -2px rgba(0, 0, 0, 0.2);
+            --shadow-hover: 0 12px 25px -5px rgba(0, 0, 0, 0.6);
         }
 
         body {
@@ -131,19 +131,27 @@
             box-sizing: border-box;
             transition: all 0.2s;
             outline: none;
-            box-shadow: inner 0 2px 4px rgba(0,0,0,0.02);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
         .search-input:focus {
             background: var(--c-surface);
             border-color: var(--cat-bat);
             box-shadow: 0 0 0 4px rgba(14, 165, 233, 0.1);
         }
+        /* 検索アイコンの修正 */
         .search-icon {
             position: absolute;
-            left: 45px; top: 50%; transform: translateY(-50%);
+            left: 45px; top: 50%; 
+            transform: translateY(-50%);
             color: var(--c-text-secondary);
             pointer-events: none;
+            width: 20px; /* 明示的にサイズを指定 */
+            height: 20px; /* 明示的にサイズを指定 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
+        .search-icon svg { stroke-width: 2.5; width: 20px; height: 20px; } /* SVG自体のサイズも保証 */
 
         .theme-toggle {
             background: var(--c-bg);
@@ -161,9 +169,11 @@
             flex-shrink: 0;
         }
         .theme-toggle:hover {
-            border-color: var(--c-text-secondary);
+            border-color: var(--c-text-primary);
             transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
+        .theme-toggle svg { width: 24px; height: 24px; stroke-width: 2.5; }
 
         .filter-scroll {
             display: flex;
@@ -177,7 +187,7 @@
 
         .filter-chip {
             background: var(--c-surface);
-            border: 1px solid var(--c-border);
+            border: 1:px solid var(--c-border);
             color: var(--c-text-secondary);
             padding: 8px 20px;
             border-radius: 50px;
@@ -187,18 +197,21 @@
             transition: all 0.2s;
             white-space: nowrap;
             display: flex; align-items: center; gap: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
         }
         .filter-chip:hover {
             background: var(--c-bg); color: var(--c-text-primary); transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
         }
         .filter-chip.active {
             background: var(--c-text-primary); color: var(--c-surface);
-            border-color: var(--c-text-primary); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: var(--c-text-primary); box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            transform: none;
         }
 
         /* --- Grid --- */
         .grid-container {
-            max-width: 100%;
+            max-width: 1200px;
             margin: 0 auto;
             padding: 40px 2rem;
             display: grid;
@@ -242,11 +255,13 @@
         .cat-tot .card-tag { background: var(--bg-tot); color: var(--cat-tot); }
         .cat-std .card-tag { background: var(--bg-std); color: var(--cat-std); }
         
+        /* 絵文字をSVGアイコンに置き換え */
         .calc-icon {
-            font-size: 1.2rem; opacity: 0.3; transition: 0.2s;
+            opacity: 0.3; transition: 0.2s;
         }
+        .calc-icon svg { width: 20px; height: 20px; stroke-width: 2.5; }
         .metric-card:hover .calc-icon { opacity: 1; transform: scale(1.1); }
-        .calc-icon.ai { color: var(--ai-color); opacity: 0.8; }
+        .calc-icon.ai svg { color: var(--ai-color); opacity: 0.8; }
 
         .metric-title {
             font-size: 2.2rem; font-weight: 800; margin: 0; line-height: 1;
@@ -316,8 +331,10 @@
             text-transform: uppercase; letter-spacing: 0.1em; margin: 3rem 0 1.5rem;
             display: flex; align-items: center; gap: 12px;
         }
-        .section-label::before { content:'#'; color: var(--cat-bat); }
+        /* 句点を削除 */
+        .section-label::before { content:''; color: var(--cat-bat); }
         .section-label::after { content:''; flex:1; height:1px; background: var(--c-border); }
+        .section-label.has-hash::before { content:'#'; }
 
         /* --- Formula Box --- */
         .formula-box {
@@ -365,7 +382,7 @@
             font-family: var(--font-mono); text-align: right; font-size: 1rem; background: var(--c-surface); color: var(--c-text-primary);
         }
         .calc-select { text-align: left; font-family: var(--font-sans); cursor: pointer; }
-        .calc-field:focus, .calc-select:focus { outline: none; border-color: var(--cat-bat); ring: 2px rgba(14,165,233,0.2); }
+        .calc-field:focus, .calc-select:focus { outline: none; border-color: var(--cat-bat); box-shadow: 0 0 0 2px rgba(14,165,233,0.2); }
 
         /* Preset Styles */
         .preset-bar {
@@ -395,6 +412,7 @@
         .btn-save:hover { opacity: 0.9; }
         .btn-del { background: #ef4444; color: white; }
         .btn-del:hover { opacity: 0.9; }
+        .preset-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
 
         /* --- Advanced Settings Style --- */
         .advanced-details {
@@ -419,7 +437,7 @@
             gap: 8px;
         }
         .advanced-summary::before {
-            content: '⚙️';
+            content: ' '; /* 絵文字削除 */
             font-size: 1rem;
         }
         .advanced-summary:hover {
@@ -436,6 +454,11 @@
         .advanced-details[open] .advanced-summary {
             border-bottom: 1px solid transparent;
         }
+        .advanced-summary .icon-gear {
+            width: 16px; height: 16px; stroke-width: 2.5; color: var(--c-text-secondary);
+        }
+        .advanced-summary:hover .icon-gear { color: var(--cat-bat); }
+
 
         .warning-msg {
             grid-column: 1 / -1;
@@ -452,6 +475,10 @@
             margin-top: 10px;
             animation: fadeIn 0.3s ease;
         }
+        .warning-msg::before {
+            content: '⚠️';
+            font-size: 1.2rem;
+        }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
         .calc-result-area {
@@ -465,8 +492,10 @@
             background: var(--cat-bat); color: white; border: none; padding: 10px 24px;
             border-radius: 50px; font-weight: 700; cursor: pointer;
             margin-top: 20px; width: 100%; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
         }
         .calc-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .calc-btn svg { width: 18px; height: 18px; stroke-width: 2.5; }
 
         .criteria-table {
             width: 100%; border-collapse: collapse; font-size: 0.95rem;
@@ -509,6 +538,7 @@
         }
         .parser-btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .parser-btn.analyzing { background: var(--cat-bat); cursor: wait; animation: pulse 1.5s infinite; }
+        .parser-btn svg { width: 18px; height: 18px; stroke-width: 2.5; }
         
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
@@ -531,7 +561,24 @@
     </style>
 </head>
 <body>
-
+    <!-- Utility Functions (Simplified for single file) -->
+    <script>
+        // Icon Definitions (Lucide Icons for a clean look)
+        const icons = {
+            search: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+            sun: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+            moon: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
+            barChart: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bar-chart"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>`,
+            calculator: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calculator"><rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="16" x2="16" y1="10" y2="18"/><line x1="8" x2="8" y1="10" y2="18"/><line x1="12" x2="12" y1="10" y2="18"/><line x1="8" x2="16" y1="14" y2="14"/></svg>`,
+            gear: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-settings"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.44a2 2 0 0 1-2 2h-.44a2 2 0 0 0-2 2v.44a2 2 0 0 1-2 2H2v.44a2 2 0 0 0 2 2h.44a2 2 0 0 1 2 2v.44a2 2 0 0 0 2 2h.44a2 2 0 0 1 2 2v.44a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.44a2 2 0 0 1 2-2h.44a2 2 0 0 0 2-2v-.44a2 2 0 0 1 2-2h.44v-.44a2 2 0 0 0-2-2h-.44a2 2 0 0 1-2-2v-.44a2 2 0 0 0-2-2h-.44a2 2 0 0 1-2-2V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>`,
+            sparkle: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sparkles"><path d="m12 3-1.83 2.66-2.67 1.84 2.67 1.84L12 13l1.83-2.66 2.67-1.84-2.67-1.84L12 3z"/><path d="m20.2 16.2-1.22 1.8-1.78 1.22 1.78 1.22 1.22 1.8 1.22-1.8 1.78-1.22-1.78-1.22-1.22-1.8z"/><path d="m4.64 10.36-1.15 1.68-1.57 1.08 1.57 1.08 1.15 1.68 1.15-1.68 1.57-1.08-1.57-1.08-1.15-1.68z"/></svg>`,
+            loader: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-loader-2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+            trash: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 3h6"/></svg>`,
+            save: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-save"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+            clipboard: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-copy"><rect width="8" height="4" x="8" y="2"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M15 22v-3a3 3 0 0 0-3-3l-2.5 2.5"/><path d="M8 13l2.5 2.5"/></svg>`
+        };
+    </script>
+    
     <header>
         <h1 class="brand">SABR<span>METRICS</span> LAB</h1>
         <p class="subtitle">Comprehensive Baseball Analytics Dictionary & Calculator</p>
@@ -539,12 +586,15 @@
 
     <div class="controls-area">
         <div class="search-wrapper">
-            <span class="search-icon">🔍</span>
-            <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索..." oninput="handleSearch()">
-            <button class="theme-toggle" onclick="toggleTheme()" title="Dark Mode">🌙</button>
+            <!-- 修正: アイコンの挿入をJavaScriptで行うため、中身を空に -->
+            <span class="search-icon" id="searchIcon"></span> 
+            <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索" oninput="handleSearch()">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Dark Mode">
+                <!-- 修正: 初期アイコンの挿入をJavaScriptで行うため、中身を空に -->
+            </button>
         </div>
         
-        <!-- Batch Calc Buttons Added (Icons Removed) -->
+        <!-- Batch Calc Buttons -->
         <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
             <button class="preset-btn btn-save" onclick="openBatchCalc('bat')" style="font-size:0.9rem; padding:10px 20px;">野手一括計算</button>
             <button class="preset-btn btn-del" onclick="openBatchCalc('pit')" style="font-size:0.9rem; padding:10px 20px; background:#f43f5e;">投手一括計算</button>
@@ -654,8 +704,8 @@
             0.73  * lg_hbp +
             0.966 * lg_roe +
             0.865 * lg_1b +
-            1.334 * d.lg_2b +
-            1.725 * d.lg_3b +
+            1.334 * lg_2b +
+            1.725 * lg_3b +
             2.065 * lg_hr;
             
         const lg_woba_std = woba_denom > 0 ? woba_num_std / woba_denom : 0;
@@ -811,13 +861,13 @@
         return { ibb, roe, s };
     }
 
-    // --- Terms Database ---
+    // --- Terms Database (説明文を常体に統一) ---
     const terms = [
         /* ---------------- 総合 (Total) ---------------- */
         {
             id: "war", category: "tot", title: "WAR (野手)", full: "Wins Above Replacement (Batter)",
-            short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標。",
-            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べてどれだけ勝利数を増やしたかによって計算される。<br>wOBA係数はリーグ環境（wOBA Scale）に合わせて自動補正されます。",
+            short: "打撃、走塁、守備を総合的に評価して野手の貢献度を表す指標",
+            desc: "代替可能な控え選手（リプレイスメント・レベルの選手）が出場する場合に比べ、どれだけ勝利数を増やしたかによって計算される。<br>wOBA係数はリーグ環境（wOBA Scale）に合わせて自動補正される",
             formula: `(wRAA + UZR + BaseRunning + ポジション補正 + 代替水準補正) ÷ RPW`,
             criteria: "2.0: レギュラー / 5.0: スター / 8.0: MVP",
             related: ["wraa", "uzr", "woba", "rpw"],
@@ -893,7 +943,7 @@
         {
             id: "wrc_plus", category: "bat", title: "wRC+", full: "weighted Runs Created Plus",
             short: "打撃の傑出度を評価する指標",
-            desc: "打席あたりの得点創出の多さを平均的な打者を100とした場合のパーセンテージで評価する指標。",
+            desc: "打席あたりの得点創出の多さを、平均的な打者を100とした場合のパーセンテージで評価する指標",
             formula: `(((wRAA/打席 + R/PA) + (R/PA - PF補正係数×R/PA)) ÷ R/PA) × 100`,
             criteria: "100: 平均 / 160: MVP候補 / 200: 歴史的",
             related: ["woba", "wraa"],
@@ -950,8 +1000,8 @@
         },
         {
             id: "pit_war", category: "tot", title: "WAR (投手)", full: "Wins Above Replacement (Pitcher)",
-            short: "投球を総合的に評価して投手の貢献度を表す指標。",
-            desc: "代替可能な控え選手に比べてどれだけ勝利数を増やしたか。<br>SPRAR (先発としての貢献) と RPRAR (救援としての貢献) を足し合わせ、RPWで割って算出します。",
+            short: "投球を総合的に評価して投手の貢献度を表す指標",
+            desc: "代替可能な控え選手に比べ、どれだけ勝利数を増やしたかによって計算される。<br>SPRAR (先発としての貢献) と RPRAR (救援としての貢献) を足し合わせ、RPWで割って算出する",
             formula: `(SPRAR + RPRAR) ÷ RPW`,
             criteria: "2.0: ローテ投手 / 4.0: エース",
             related: ["fip", "tra", "rsaa", "rpw"],
@@ -1006,32 +1056,32 @@
         },
         {
             id: "rpw", category: "tot", title: "RPW", full: "Runs Per Win",
-            short: "勝利を1つ増やすのに必要な得点数。",
-            desc: "「1勝の重み」を得点換算したもの。デフォルトでは8.5に設定されています。",
+            short: "勝利を1つ増やすのに必要な得点数",
+            desc: "「1勝の重み」を得点換算したもの。デフォルトでは8.5に設定されている",
             formula: `20 × (リーグ総得点 ÷ リーグ総投球回)`,
             criteria: "8.5 ～ 10.0",
             related: ["war", "pythag"]
         },
         {
             id: "wpa", category: "tot", title: "WPA", full: "Win Probability Added",
-            short: "勝利確率をどれだけ変動させたか。",
-            desc: "状況（点差、イニング、走者、アウト）ごとの勝利確率を、プレイ前後でどれだけ増やしたか。勝負強さを測るのに最適。サヨナラホームランなどは非常に高い値になる。",
+            short: "勝利確率をどれだけ変動させたかを示す",
+            desc: "状況（点差、イニング、走者、アウト）ごとの勝利確率を、プレイ前後でどれだけ増やしたかによって評価する。勝負強さを測るのに最適で、サヨナラホームランなどは非常に高い値になる",
             formula: `プレイ後の勝利確率 - プレイ前の勝利確率`,
             criteria: "状況に依存",
             related: ["re24"]
         },
         {
             id: "re24", category: "tot", title: "RE24", full: "Run Expectancy 24",
-            short: "状況別の「得点期待値」の増減。",
-            desc: "24種類の状況（無死一塁など）における得点期待値をどれだけ改善させたか。打点などより文脈を正確に反映する。",
+            short: "状況別の「得点期待値」の増減を示す",
+            desc: "24種類の状況（無死一塁など）における得点期待値をどれだけ改善させたかを測る。打点などより文脈を正確に反映する",
             formula: `プレイ後期待値 - プレイ前期待値 + 得点`,
             criteria: "0: 平均",
             related: ["wpa"]
         },
         {
             id: "pythag", category: "tot", title: "Pythagenpat", full: "Pythagorean Expectation",
-            short: "得失点から予測される「本来あるべき勝率」。",
-            desc: "実際の勝率がこれより高いと「運が良い」または「接戦に強い（監督の采配が良い）」とされる。1.02などでは、未来の勝率予測に役立つとして重視される。",
+            short: "得失点から予測される「本来あるべき勝率」",
+            desc: "実際の勝率がこれより高いと「運が良い」または「接戦に強い（監督の采配が良い）」とされる。未来の勝率予測に役立つとして重視される",
             formula: `${formatVar('得点')}^x ÷ (${formatVar('得点')}^x + ${formatVar('失点')}^x) <br><small style="font-size:0.7em; color:#94a3b8;">x = (得点+失点)^0.287</small>`,
             criteria: "実際の勝率との乖離を確認",
             inputs: [
@@ -1044,8 +1094,8 @@
         },
         {
             id: "pf", category: "tot", title: "PF", full: "Park Factor",
-            short: "球場の特性（打者有利/投手有利）を表す数値。",
-            desc: "1.00が平均。1.00より大きければ打者有利、小さければ投手有利。セイバーメトリクスでは、選手の成績を比較する際にこのPF補正をかけることが常識となっている。",
+            short: "球場の特性（打者有利/投手有利）を表す数値",
+            desc: "1.00が平均。1.00より大きければ打者有利、小さければ投手有利とされる。セイバーメトリクスでは、選手の成績を比較する際にこのPF補正をかけることが常識となっている",
             formula: `(本拠地での本塁打 + 被本塁打) ÷ (敵地での本塁打 + 被本塁打)`,
             criteria: "1.00: 中立 / 1.20: ヒッターズパーク",
             related: ["wrc_plus"]
@@ -1054,7 +1104,7 @@
         /* ---------------- 打撃 (Batting) ---------------- */
         {
             id: "avg", category: "std", title: "AVG", full: "Batting Average",
-            short: "打率。",
+            short: "打率",
             formula: `${formatVar('安打')} ÷ ${formatVar('打数')}`,
             criteria: ".250: 平均 / .300: 優秀",
             inputs: [{id:'h', label:'安打'}, {id:'ab', label:'打数'}],
@@ -1062,8 +1112,8 @@
         },
         {
             id: "obp", category: "std", title: "OBP", full: "On Base Percentage",
-            short: "出塁率。",
-            desc: "打率よりも得点との相関が高いため、セイバーメトリクスでは打率より重視される。四死球を選べる打者は価値が高い。",
+            short: "出塁率",
+            desc: "打率よりも得点との相関が高いため、セイバーメトリクスでは打率より重視される。四死球を選べる打者は価値が高いと評価される",
             formula: `(${formatVar('安打')} + ${formatVar('四球')} + ${formatVar('死球')}) ÷ (${formatVar('打数')} + ${formatVar('四球')} + ${formatVar('死球')} + ${formatVar('犠飛')})`,
             criteria: ".320: 平均 / .400: 優秀",
             related: ["ops", "isod"],
@@ -1072,8 +1122,8 @@
         },
         {
             id: "slg", category: "std", title: "SLG", full: "Slugging Percentage",
-            short: "長打率。",
-            desc: "打率のような名前だが「1打数あたりの期待塁打数」を表す。単打=1、本塁打=4として計算。",
+            short: "長打率",
+            desc: "打率のような名前だが「1打数あたりの期待塁打数」を表す。単打=1、本塁打=4として計算する",
             formula: `${formatVar('塁打')} ÷ ${formatVar('打数')}`,
             criteria: ".400: 平均 / .500: パワーヒッター",
             related: ["ops", "iso"],
@@ -1082,8 +1132,8 @@
         },
         {
             id: "ops", category: "std", title: "OPS", full: "On-base Plus Slugging",
-            short: "出塁率 + 長打率。",
-            desc: "計算が簡単でありながら、チームの得点数と非常に高い相関を持つ指標。現在では公式記録としても採用されることが多い。",
+            short: "出塁率 + 長打率",
+            desc: "計算が簡単でありながら、チームの得点数と非常に高い相関を持つ指標。現在では公式記録としても採用されることが多い",
             formula: `${formatVar('出塁率')} + ${formatVar('長打率')}`,
             criteria: ".730: 平均 / .800: 優秀 / 1.000: 最強",
             related: ["woba", "xr"],
@@ -1099,8 +1149,8 @@
         },
         {
             id: "woba", category: "bat", title: "wOBA", full: "weighted On-Base Average",
-            short: "各イベントを得点価値で重み付けした「真の出塁率」。",
-            desc: "OPSの欠点（出塁率を過小評価している点）を修正し、各イベント（単打、本塁打、四球など）が得点にどれだけ貢献したかを係数化して計算する。係数は年度ごとに変動する。",
+            short: "各イベントを得点価値で重み付けした「真の出塁率」",
+            desc: "OPSの欠点（出塁率を過小評価している点）を修正し、各イベント（単打、本塁打、四球など）が得点にどれだけ貢献したかを係数化して計算する。係数は年度ごとに変動する",
             formula: `(0.69×${formatVar('四球')} + 0.72×${formatVar('死球')} + 0.89×${formatVar('単打')} + 1.27×${formatVar('二塁打')} + 1.62×${formatVar('三塁打')} + 2.10×${formatVar('本塁打')}) ÷ ${formatVar('打席')}`,
             criteria: ".320: 平均 / .400: MVP級",
             related: ["ops", "wrc_plus"],
@@ -1142,16 +1192,16 @@
         },
         {
             id: "wraa", category: "bat", title: "wRAA", full: "weighted Runs Above Average",
-            short: "平均的な打者より「何点」多く取ったか。",
-            desc: "積み上げ指標。出場数が多く、かつ打撃成績が良いほど数値が高くなる。WARの打撃構成要素として使われる。<br>式中の<strong>wOBAScale（約1.24）</strong>は、wOBAを出塁率のスケール（.320前後が平均）に合わせるために掛けられていた係数を、得点単位に戻すために割るもの。",
+            short: "平均的な打者より「何点」多く取ったかを示す",
+            desc: "積み上げ指標。出場数が多く、かつ打撃成績が良いほど数値が高くなる。WARの打撃構成要素として使われる。<br>式中の<strong>wOBAScale（約1.24）</strong>は、wOBAを出塁率のスケール（.320前後が平均）に合わせるために掛けられていた係数を、得点単位に戻すために割るもの",
             formula: `(${formatVar('wOBA')} - リーグ平均wOBA) ÷ wOBAScale × ${formatVar('打席')}`,
             criteria: "0: 平均 / +20: 一流",
             related: ["war", "woba"]
         },
         {
             id: "iso", category: "bat", title: "ISO", full: "Isolated Power",
-            short: "打率を除いた純粋な長打力。",
-            desc: "長打率から打率を引いて算出する。単打を無視し、二塁打以上を打つ能力のみを評価する。",
+            short: "打率を除いた純粋な長打力",
+            desc: "長打率から打率を引いて算出する。単打を無視し、二塁打以上を打つ能力のみを評価する",
             formula: `${formatVar('長打率')} - ${formatVar('打率')}`,
             criteria: ".140: 平均 / .250: 強打者",
             inputs: [{id:'slg', label:'長打率'}, {id:'avg', label:'打率'}],
@@ -1159,8 +1209,8 @@
         },
         {
             id: "babip", category: "bat", title: "BABIP", full: "Batting Average on Balls In Play",
-            short: "インプレー打球のヒット率（運の指標）。",
-            desc: "本塁打以外のフェアゾーンに飛んだ打球がヒットになった割合。極端に高い/低い場合は「運」や「守備」の影響が強く、翌年は平均（約.300）に近づく傾向がある。",
+            short: "インプレー打球のヒット率（運の指標）",
+            desc: "本塁打以外のフェアゾーンに飛んだ打球がヒットになった割合。極端に高い/低い場合は「運」や「守備」の影響が強く、翌年は平均（約.300）に近づく傾向がある",
             formula: `(${formatVar('安打')}-${formatVar('本塁打')}) ÷ (${formatVar('打数')}-${formatVar('三振')}-${formatVar('本塁打')}+${formatVar('犠飛')})`,
             criteria: ".300前後が基準",
             inputs: [{id:'h', label:'安打'}, {id:'hr', label:'本塁打'}, {id:'ab', label:'打数'}, {id:'so', label:'三振'}, {id:'sf', label:'犠飛'}],
@@ -1168,8 +1218,8 @@
         },
         {
             id: "bb_k", category: "bat", title: "BB/K", full: "Walk to Strikeout Ratio",
-            short: "三振1つに対する四球の数。",
-            desc: "選球眼とコンタクト能力のバランスを示す。1.0を超えれば非常に優秀な打者とされる。",
+            short: "三振1つに対する四球の数",
+            desc: "選球眼とコンタクト能力のバランスを示す。1.0を超えれば非常に優秀な打者とされる",
             formula: `${formatVar('四球')} ÷ ${formatVar('三振')}`,
             criteria: "0.4: 平均 / 1.0以上: 優秀",
             inputs: [{id:'bb', label:'四球'}, {id:'so', label:'三振'}],
@@ -1177,8 +1227,8 @@
         },
         {
             id: "k_pct", category: "bat", title: "K%", full: "Strikeout Percentage",
-            short: "打席に占める三振の割合。",
-            desc: "三振が少ないほどコンタクト能力が高いとされるが、現代野球では長打とのトレードオフとしてある程度許容される傾向。",
+            short: "打席に占める三振の割合",
+            desc: "三振が少ないほどコンタクト能力が高いとされるが、現代野球では長打とのトレードオフとしてある程度許容される傾向がある",
             formula: `${formatVar('三振')} ÷ ${formatVar('打席')}`,
             criteria: "20%: 平均 / 10%以下: コンタクト巧者",
             inputs: [{id:'so', label:'三振'}, {id:'pa', label:'打席'}],
@@ -1186,8 +1236,8 @@
         },
         {
             id: "bb_pct", category: "bat", title: "BB%", full: "Walk Percentage",
-            short: "打席に占める四球の割合。",
-            desc: "選球眼の良さを示す。打率が低くてもBB%が高い選手は出塁能力が高く、チームへの貢献度は大きい。",
+            short: "打席に占める四球の割合",
+            desc: "選球眼の良さを示す。打率が低くてもBB%が高い選手は出塁能力が高く、チームへの貢献度は大きいとされる",
             formula: `${formatVar('四球')} ÷ ${formatVar('打席')}`,
             criteria: "8%: 平均 / 10%以上: 選球眼が良い",
             inputs: [{id:'bb', label:'四球'}, {id:'pa', label:'打席'}],
@@ -1195,8 +1245,8 @@
         },
         {
             id: "rc", category: "bat", title: "RC", full: "Runs Created",
-            short: "打者が創出した総得点数。",
-            desc: "ビル・ジェームズが考案した古典的な指標。安打や四球などの出塁能力と、長打力を掛け合わせて得点能力を推定する。",
+            short: "打者が創出した総得点数",
+            desc: "ビル・ジェームズが考案した古典的な指標。安打や四球などの出塁能力と、長打力を掛け合わせて得点能力を推定する",
             formula: `(出塁能力A × 進塁能力B) ÷ (打席C)`,
             criteria: "積み上げ型指標",
             inputs: [{id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'tb', label:'塁打'}, {id:'ab', label:'打数'}, {id:'sf', label:'犠飛'}],
@@ -1210,8 +1260,8 @@
         },
         {
             id: "rc27", category: "bat", title: "RC27", full: "Runs Created per 27 Outs",
-            short: "この打者9人で打線を組んだ時の1試合予想得点。",
-            desc: "RCを27アウト（1試合分）に換算したもの。打者の得点能力を直感的に理解しやすい。",
+            short: "この打者9人で打線を組んだ時の1試合予想得点",
+            desc: "RCを27アウト（1試合分）に換算したもの。打者の得点能力を直感的に理解しやすい",
             formula: `RC ÷ (${formatVar('打数')}-${formatVar('安打')}+${formatVar('盗塁死')}+${formatVar('併殺')}+${formatVar('犠打')}+${formatVar('犠飛')}) × 27`,
             criteria: "4.5点: 平均",
             inputs: [{id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'tb', label:'塁打'}, {id:'ab', label:'打数'}],
@@ -1223,8 +1273,8 @@
         },
         {
             id: "xr", category: "bat", title: "XR", full: "Extrapolated Runs",
-            short: "各プレーに得点価値係数を掛けて算出する得点力。",
-            desc: "RCと似ているが、より各イベント（単打0.5点、本塁打1.44点など）の得点貢献を線形的に足し合わせて評価する日本で人気の指標。",
+            short: "各プレーに得点価値係数を掛けて算出する得点力",
+            desc: "RCと似ているが、より各イベント（単打0.5点、本塁打1.44点など）の得点貢献を線形的に足し合わせて評価する、日本で人気の指標",
             formula: `0.5×${formatVar('単打')} + 0.72×${formatVar('二塁打')} + 1.44×${formatVar('HR')} + 0.34×(${formatVar('四球')}+${formatVar('死球')})...`,
             criteria: "RC27と同様に評価可能",
             related: ["rc27"],
@@ -1233,7 +1283,7 @@
         },
         {
             id: "ab_hr", category: "bat", title: "AB/HR", full: "At Bats per Home Run",
-            short: "HR1本打つのにかかる打数。",
+            short: "HR1本打つのにかかる打数",
             formula: `${formatVar('打数')} ÷ ${formatVar('本塁打')}`,
             criteria: "20.0以下: 本塁打打者",
             inputs: [{id:'ab', label:'打数'}, {id:'hr', label:'本塁打'}],
@@ -1241,15 +1291,15 @@
         },
         {
             id: "pa_bb", category: "bat", title: "PA/BB", full: "Plate Appearances per Walk",
-            short: "四球を1つ選ぶのにかかる打席数。",
+            short: "四球を1つ選ぶのにかかる打席数",
             formula: `${formatVar('打席')} ÷ ${formatVar('四球')}`,
             inputs: [{id:'pa', label:'打席'}, {id:'bb', label:'四球'}],
             calc: (d) => (d.pa / d.bb).toFixed(1)
         },
         {
             id: "isod", category: "bat", title: "IsoD", full: "Isolated Discipline",
-            short: "四死球による出塁能力。",
-            desc: "出塁率から打率を引いて算出する。選球眼の良さを示す。",
+            short: "四死球による出塁能力",
+            desc: "出塁率から打率を引いて算出する。選球眼の良さを示す",
             formula: `${formatVar('出塁率')} - ${formatVar('打率')}`,
             criteria: "0.06: 平均 / 0.10: 選球眼良",
             inputs: [{id:'obp', label:'出塁率'}, {id:'avg', label:'打率'}],
@@ -1257,8 +1307,8 @@
         },
         {
             id: "gpa", category: "bat", title: "GPA", full: "Gross Production Average",
-            short: "OPSより打率に近い感覚で評価できる指標。",
-            desc: "OPSは出塁率を過小評価する傾向があるため、出塁率に1.8倍の重みをかけてバランスを取り、さらに打率のようなスケールに変換したもの。",
+            short: "OPSより打率に近い感覚で評価できる指標",
+            desc: "OPSは出塁率を過小評価する傾向があるため、出塁率に1.8倍の重みをかけてバランスを取り、さらに打率のようなスケールに変換したもの",
             formula: `(1.8 × ${formatVar('出塁率')} + ${formatVar('長打率')}) ÷ 4`,
             criteria: ".250: 平均",
             inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
@@ -1266,8 +1316,8 @@
         },
         {
             id: "seca", category: "bat", title: "SecA", full: "Secondary Average",
-            short: "打率以外の要素（四球、長打、盗塁）での貢献度。",
-            desc: "ビル・ジェームズ考案。「打率」に含まれない攻撃力を測る。",
+            short: "打率以外の要素（四球、長打、盗塁）での貢献度",
+            desc: "ビル・ジェームズ考案。「打率」に含まれない攻撃力を測る",
             formula: `(${formatVar('塁打')}-${formatVar('安打')} + ${formatVar('四球')} + ${formatVar('盗塁')} - ${formatVar('盗塁死')}) ÷ ${formatVar('打数')}`,
             criteria: ".250: 平均 / .400: 超優秀",
             inputs: [{id:'tb', label:'塁打'}, {id:'h', label:'安打'}, {id:'bb', label:'四球'}, {id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'}, {id:'ab', label:'打数'}],
@@ -1275,8 +1325,8 @@
         },
         {
             id: "noi", category: "bat", title: "NOI", full: "New Offensive Index",
-            short: "出塁率＋長打率÷3。",
-            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標。",
+            short: "出塁率＋長打率÷3",
+            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標",
             formula: `(${formatVar('出塁率')} + ${formatVar('長打率')} ÷ 3) × 1000`,
             criteria: "450: 平均 / 550: 優秀",
             inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
@@ -1286,7 +1336,7 @@
         /* ---------------- 投球 (Pitching) ---------------- */
         {
             id: "era", category: "std", title: "ERA", full: "Earned Run Average",
-            short: "防御率。",
+            short: "防御率",
             formula: `${formatVar('自責点')} × 9 ÷ ${formatVar('投球回')}`,
             criteria: "3.00: 平均",
             inputs: [{id:'er', label:'自責点'}, {id:'ip', label:'投球回'}],
@@ -1294,7 +1344,7 @@
         },
         {
             id: "whip", category: "std", title: "WHIP", full: "Walks plus Hits per Inning Pitched",
-            short: "1回あたりに出したランナーの数。",
+            short: "1回あたりに出したランナーの数",
             formula: `(${formatVar('被安打')} + ${formatVar('与四球')}) ÷ ${formatVar('投球回')}`,
             criteria: "1.30: 平均 / 1.00未満: エース",
             inputs: [{id:'h', label:'被安打'}, {id:'bb', label:'与四球'}, {id:'ip', label:'投球回'}],
@@ -1302,8 +1352,8 @@
         },
         {
             id: "fip", category: "pit", title: "FIP", full: "Fielding Independent Pitching",
-            short: "守備の影響を除外した「真の防御率」。",
-            desc: "投手の責任である三振・四球・被本塁打のみで評価する。防御率よりも将来の成績予測に役立つ。",
+            short: "守備の影響を除外した「真の防御率」",
+            desc: "投手の責任である三振・四球・被本塁打のみで評価する。防御率よりも将来の成績予測に役立つ",
             formula: `(13×${formatVar('本塁打')} + 3×(${formatVar('四球')}+${formatVar('死球')}) - 2×${formatVar('三振')}) ÷ ${formatVar('投球回')} + 3.10`,
             criteria: "防御率スケール",
             inputs: [{id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
@@ -1311,8 +1361,8 @@
         },
         {
             id: "xfip", category: "pit", title: "xFIP", full: "Expected FIP",
-            short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版。",
-            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算します。被本塁打の運要素を排除し、より純粋な実力を測ります。<br>※選択された打球傾向（ゴロ率）からフライ数を自動推定して計算します。",
+            short: "被本塁打の代わりに「フライボール数」を用いたFIPの進化版",
+            desc: "HR/FB（フライに対する本塁打の割合）をリーグ平均値に置き換えて計算する。被本塁打の運要素を排除し、より純粋な実力を測る。<br>※選択された打球傾向（ゴロ率）からフライ数を自動推定して計算する",
             formula: `(13 × (FB × LgHR/LgFB) + 3 × (BB - IBB + HBP) - 2 × SO) ÷ IP + 定数`,
             criteria: "防御率スケール",
             aiMode: true,
@@ -1352,8 +1402,8 @@
         },
         {
             id: "siera", category: "pit", title: "SIERA", full: "Skill-Interactive Earned Run Average",
-            short: "打球の質や三振・四球を考慮した、FIPより精度の高い指標。",
-            desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出されます。<br>※選択された打球傾向から打球内訳（ゴロ・フライ等）を自動推定して計算します。",
+            short: "打球の質や三振・四球を考慮した、FIPより精度の高い指標",
+            desc: "投球の「質」を最も正確に反映するとされる指標。ゴロ率や三振、四球のバランスから算出される。<br>※選択された打球傾向から打球内訳（ゴロ・フライ等）を自動推定して計算する",
             // formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + ...`,
             formula: `6.145 - 16.99(SO/PA) + 11.43(BB/PA) - 1.86((GB-FB-PU)/PA) + 7.65((SO/PA)²) - 6.66(((GB-FB-PU)/PA)²) + 10.13(SO/PA)((GB-FB-PU)/PA) - 5.20(BB/PA)((GB-FB-PU)/PA)`,
             criteria: "失点率スケール (3.00: 優秀)",
@@ -1403,8 +1453,8 @@
         },
         {
             id: "tra", category: "pit", title: "tRA", full: "True Runs Allowed",
-            short: "打球の種類（ゴロ・フライなど）も考慮した指標。",
-            desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。<br>※打球傾向から打球数を推定して計算します。",
+            short: "打球の種類（ゴロ・フライなど）も考慮した指標",
+            desc: "FIPを発展させ、各打球種別（ライナー、ゴロ、フライ）の期待失点値を割り当てて算出する指標。<br>※打球傾向から打球数を推定して計算する",
             formula: `( (0.297×BB + 0.327×HBP - 0.108×SO + 1.401×HR + 0.036×GB - 0.124×PU + 0.132×FB + 0.289×LD) ÷ (SO + 0.745×GB + 0.304×LD + 0.994×PU + 0.675×FB) × 27 ) + 定数`,
             criteria: "失点率スケール",
             related: ["fip"],
@@ -1458,13 +1508,13 @@
                 // 通常tRAは失点率スケールだが、防御率スケールで表示したい場合は0.92を掛ける
                 // ユーザー定義の定数式がRA9スケールに合わせるものなので、
                 // 最終的に防御率感覚で評価したいならここで変換する。
-                // ここではユーザー定義に従い、定数加算後の値をそのまま返します (RA9スケール)
+                // ここではユーザー定義に従い、定数加算後の値をそのまま返す (RA9スケール)
                 return isFinite(val) ? val.toFixed(2) : "---";
             }
         },
         {
             id: "k_9", category: "pit", title: "K/9", full: "Strikeouts per 9",
-            short: "奪三振率。",
+            short: "奪三振率",
             formula: `${formatVar('奪三振')} × 9 ÷ ${formatVar('投球回')}`,
             criteria: "7.0: 平均 / 9.0: ドクターK",
             inputs: [{id:'so', label:'奪三振'}, {id:'ip', label:'投球回'}],
@@ -1472,7 +1522,7 @@
         },
         {
             id: "bb_9", category: "pit", title: "BB/9", full: "Walks per 9",
-            short: "与四球率。",
+            short: "与四球率",
             formula: `${formatVar('与四球')} × 9 ÷ ${formatVar('投球回')}`,
             criteria: "3.0: 平均 / 2.0以下: 制球良",
             inputs: [{id:'bb', label:'与四球'}, {id:'ip', label:'投球回'}],
@@ -1480,8 +1530,8 @@
         },
         {
             id: "k_pct_pit", category: "pit", title: "K%", full: "Strikeout Percentage (Pitcher)",
-            short: "対戦打者に占める奪三振の割合。",
-            desc: "奪三振率(K/9)よりも投球回数に依存せず、投手の支配力を正確に表す指標。",
+            short: "対戦打者に占める奪三振の割合",
+            desc: "奪三振率(K/9)よりも投球回数に依存せず、投手の支配力を正確に表す指標",
             formula: `${formatVar('奪三振')} ÷ ${formatVar('打者数')}`,
             criteria: "20%: 平均 / 30%: 優秀",
             inputs: [{id:'so', label:'奪三振'}, {id:'bf', label:'打者数'}],
@@ -1489,8 +1539,8 @@
         },
         {
             id: "bb_pct_pit", category: "pit", title: "BB%", full: "Walk Percentage (Pitcher)",
-            short: "対戦打者に占める与四球の割合。",
-            desc: "与四球率(BB/9)よりも投球回数に依存せず、制球力を正確に表す指標。",
+            short: "対戦打者に占める与四球の割合",
+            desc: "与四球率(BB/9)よりも投球回数に依存せず、制球力を正確に表す指標",
             formula: `${formatVar('与四球')} ÷ ${formatVar('打者数')}`,
             criteria: "8%: 平均 / 5%以下: 優秀",
             inputs: [{id:'bb', label:'与四球'}, {id:'bf', label:'打者数'}],
@@ -1498,8 +1548,8 @@
         },
         {
             id: "k_bb_pit", category: "pit", title: "K/BB", full: "K-to-BB Ratio",
-            short: "奪三振と与四球の比率。",
-            desc: "投手の完成度・安定感を示す重要指標。3.5を超えると非常に優秀とされる。",
+            short: "奪三振と与四球の比率",
+            desc: "投手の完成度・安定感を示す重要指標。3.5を超えると非常に優秀とされる",
             formula: `${formatVar('奪三振')} ÷ ${formatVar('与四球')}`,
             criteria: "2.5: 平均 / 4.0: 非常に優秀",
             inputs: [{id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}],
@@ -1507,8 +1557,8 @@
         },
         {
             id: "noi", category: "bat", title: "NOI", full: "New Offensive Index",
-            short: "出塁率＋長打率÷3。",
-            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標。",
+            short: "出塁率＋長打率÷3",
+            desc: "OPSの簡易修正版。出塁率の価値を長打率の3倍と見積もって計算する。日本独自の指標",
             formula: `(${formatVar('出塁率')} + ${formatVar('長打率')} ÷ 3) × 1000`,
             criteria: "450: 平均 / 550: 優秀",
             inputs: [{id:'obp', label:'出塁率'}, {id:'slg', label:'長打率'}],
@@ -1516,8 +1566,8 @@
         },
         {
             id: "gb_pct", category: "pit", title: "GB%", full: "Ground Ball Percentage (Est)",
-            short: "打球傾向設定に基づく推定ゴロ率。",
-            desc: "選択された打球傾向設定から算出されたゴロ率を表示します。",
+            short: "打球傾向設定に基づく推定ゴロ率",
+            desc: "選択された打球傾向設定から算出されたゴロ率を表示する",
             formula: `推定値`,
             criteria: "45%: 平均 / 50%超: ゴロP",
             aiMode: true,
@@ -1534,8 +1584,8 @@
         },
         {
             id: "fb_pct", category: "pit", title: "FB%", full: "Fly Ball Percentage (Est)",
-            short: "打球傾向設定に基づく推定フライ率。",
-            desc: "選択された打球傾向設定から算出されたフライ率（内野フライ含む）を表示します。",
+            short: "打球傾向設定に基づく推定フライ率",
+            desc: "選択された打球傾向設定から算出されたフライ率（内野フライ含む）を表示する",
             formula: `推定値`,
             criteria: "35%: 平均",
             aiMode: true,
@@ -1559,8 +1609,8 @@
         /* ---------------- 守備 (Fielding) ---------------- */
         {
             id: "uzr", category: "fld", title: "UZR", full: "Ultimate Zone Rating",
-            short: "守備による失点防止量（平均比）。",
-            desc: "1.02などで採用される守備指標のスタンダード。グラウンドをゾーンに分割し、打球ごとの処理難易度に応じて貢献度を算出する。",
+            short: "守備による失点防止量（平均比）",
+            desc: "1.02などで採用される守備指標のスタンダード。グラウンドをゾーンに分割し、打球ごとの処理難易度に応じて貢献度を算出する",
             formula: "加点方式",
             criteria: "0: 平均 / +15: ゴールドグラブ",
             // 入力された守備評価(def)をそのまま返す簡易実装
@@ -1569,8 +1619,8 @@
         },
         {
             id: "der", category: "fld", title: "DER", full: "Defensive Efficiency Ratio",
-            short: "本塁打以外のインプレー打球をアウトにした割合。",
-            desc: "チーム全体の守備力を測る指標。BABIPの逆数に近い概念。",
+            short: "本塁打以外のインプレー打球をアウトにした割合",
+            desc: "チーム全体の守備力を測る指標。BABIPの逆数に近い概念",
             formula: `1 - ((${formatVar('被安打')} - ${formatVar('被HR')}) ÷ (${formatVar('打者')} - ${formatVar('三振')} - ${formatVar('四球')} - ${formatVar('死球')} - ${formatVar('被HR')}))`,
             criteria: ".700前後が平均",
             inputs: [{id:'h', label:'被安打'}, {id:'hr', label:'被HR'}, {id:'bf', label:'打者数'}, {id:'so', label:'奪三振'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}],
@@ -1578,23 +1628,23 @@
         },
         {
             id: "drs", category: "fld", title: "DRS", full: "Defensive Runs Saved",
-            short: "UZRと並ぶ守備指標の決定版。",
-            desc: "UZRと同様のコンセプトだが、測定方法が異なる。MLBではUZRと共にゴールドグラブ賞の選考基準となる。",
+            short: "UZRと並ぶ守備指標の決定版",
+            desc: "UZRと同様のコンセプトだが、測定方法が異なる。MLBではUZRと共にゴールドグラブ賞の選考基準となる",
             formula: "加点方式",
             criteria: "+15以上: 最高レベル"
         },
         {
             id: "rf", category: "fld", title: "RF", full: "Range Factor",
-            short: "1試合あたりに関与したアウトの数。",
-            desc: "守備範囲の広さを示すとされるが、投手の奪三振能力などに影響を受けるため、UZRなどより精度は低い。",
+            short: "1試合あたりに関与したアウトの数",
+            desc: "守備範囲の広さを示すとされる指標だが、投手の奪三振能力などに影響を受けるため、UZRなどより精度は低い",
             formula: `(${formatVar('刺殺')}+${formatVar('補殺')}) ÷ ${formatVar('守備回')} × 9`,
             inputs: [{id:'po', label:'刺殺'}, {id:'a', label:'補殺'}, {id:'inn', label:'守備回'}],
             calc: (d) => ((d.po + d.a) / d.inn * 9).toFixed(2)
         },
         {
             id: "fp", category: "fld", title: "FP%", full: "Fielding Percentage",
-            short: "守備率。",
-            desc: "失策をしなかった割合。守備範囲の広さは考慮されないため、現代のセイバーメトリクスでは重要視されない。",
+            short: "守備率",
+            desc: "失策をしなかった割合。守備範囲の広さは考慮されないため、現代のセイバーメトリクスでは重要視されない",
             formula: `(${formatVar('刺殺')}+${formatVar('補殺')}) ÷ (${formatVar('刺殺')}+${formatVar('補殺')}+${formatVar('失策')})`,
             inputs: [{id:'po', label:'刺殺'}, {id:'a', label:'補殺'}, {id:'e', label:'失策'}],
             calc: (d) => ((d.po + d.a)/(d.po + d.a + d.e)).toFixed(3).replace(/^0/,'')
@@ -1603,16 +1653,16 @@
         /* ---------------- 走塁 (Running) ---------------- */
         {
             id: "wsb", category: "fld", title: "wSB", full: "weighted Stolen Base Runs",
-            short: "盗塁による得点貢献。",
-            desc: "盗塁成功によるプラスと、盗塁死によるマイナス（成功よりペナルティが大きい）を合算したもの。",
+            short: "盗塁による得点貢献",
+            desc: "盗塁成功によるプラスと、盗塁死によるマイナス（成功よりペナルティが大きい）を合算したもの",
             formula: `0.2×${formatVar('盗塁')} - 0.4×${formatVar('盗塁死')}`,
-            desc: "係数は概算値。盗塁死のマイナスは成功のプラスより大きい。",
+            desc: "係数は概算値。盗塁死のマイナスは成功のプラスより大きいとされる",
             inputs: [{id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'}],
             calc: (d) => (0.2*d.sb - 0.4*d.cs).toFixed(1)
         },
         {
             id: "sb_pct", category: "fld", title: "SB%", full: "Stolen Base Percentage",
-            short: "盗塁成功率。",
+            short: "盗塁成功率",
             formula: `${formatVar('盗塁')} ÷ (${formatVar('盗塁')} + ${formatVar('盗塁死')})`,
             criteria: "70%以上が損益分岐点",
             inputs: [{id:'sb', label:'盗塁'}, {id:'cs', label:'盗塁死'}],
@@ -1622,7 +1672,7 @@
         /* ---------------- その他 ---------------- */
         {
             id: "p_ip", category: "pit", title: "P/IP", full: "Pitches per Inning",
-            short: "1イニングあたりの投球数。",
+            short: "1イニングあたりの投球数",
             formula: `${formatVar('投球数')} ÷ ${formatVar('投球回')}`,
             criteria: "15球以下: 省エネ",
             inputs: [{id:'np', label:'球数'}, {id:'ip', label:'投球回'}],
@@ -1630,8 +1680,8 @@
         },
         {
             id: "rsaa", category: "pit", title: "RSAA", full: "Runs Saved Above Average",
-            short: "平均的な投手に比べて、どれだけ失点を防いだか。",
-            desc: "防御率と投球回を基に算出する積み上げ系指標。WARの投球版の簡易計算に使われることがある。",
+            short: "平均的な投手に比べて、どれだけ失点を防いだかを示す",
+            desc: "防御率と投球回を基に算出する積み上げ系指標。WARの投球版の簡易計算に使われることがある",
             formula: `(リーグ平均防御率 - ${formatVar('防御率')}) × ${formatVar('投球回')} ÷ 9`,
             criteria: "プラスなら平均以上",
             inputs: [{id:'lg_era', label:'L平均防御率'}, {id:'era', label:'防御率'}, {id:'ip', label:'投球回'}],
@@ -1651,6 +1701,8 @@
             }
         }
     ];
+    // --- End Terms Database ---
+
 
     // --- Application Logic ---
     const grid = document.getElementById('grid');
@@ -1659,23 +1711,48 @@
     const modalBodyContent = document.getElementById('modal-body-content');
     const searchInput = document.getElementById('searchInput');
     const filterChips = document.querySelectorAll('.filter-chip');
+    const themeToggleBtn = document.getElementById('themeToggle');
+    // 追加: 検索アイコンの要素
+    const searchIconEl = document.getElementById('searchIcon');
     
     let currentFilter = 'all';
     let currentSearch = '';
-    let currentTermId = null; // Track currently open modal for OCR
+    let currentTermId = null; 
 
     // Dark Mode Toggle Function
     function toggleTheme() {
         document.body.classList.toggle('dark-mode');
-        const btn = document.querySelector('.theme-toggle');
+        // 修正: アイコンを動的に更新
         if (document.body.classList.contains('dark-mode')) {
-            btn.textContent = '☀️';
-            btn.title = "Light Mode";
+            themeToggleBtn.innerHTML = icons.sun;
+            themeToggleBtn.title = "Light Mode";
+            localStorage.setItem('theme', 'dark');
         } else {
-            btn.textContent = '🌙';
-            btn.title = "Dark Mode";
+            themeToggleBtn.innerHTML = icons.moon;
+            themeToggleBtn.title = "Dark Mode";
+            localStorage.setItem('theme', 'light');
         }
     }
+    
+    // Initial theme check & icon setup
+    (function() {
+        // 1. 検索アイコンの設定
+        if (searchIconEl) {
+            searchIconEl.innerHTML = icons.search;
+        }
+
+        // 2. テーマ設定とアイコンの設定
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.body.classList.add('dark-mode');
+            themeToggleBtn.innerHTML = icons.sun;
+            themeToggleBtn.title = "Light Mode";
+        } else {
+             themeToggleBtn.innerHTML = icons.moon;
+             themeToggleBtn.title = "Dark Mode";
+        }
+    })();
+
 
     function render() {
         grid.innerHTML = '';
@@ -1702,8 +1779,13 @@
             el.onclick = () => openModal(term.id);
             
             let catLabel = getCatLabel(term.category);
-            // 文言変更: 詳細シミュレーション -> 推定, アイコンはグラフ(📊)のまま
-            const hasCalc = term.inputs ? `<span class="calc-icon ${term.aiMode ? 'ai' : ''}" title="${term.aiMode ? '推定' : '計算可能'}">${term.aiMode ? '📊' : '🧮'}</span>` : '';
+            
+            // アイコンをSVGに置き換え
+            let iconSvg = icons.calculator;
+            if(term.aiMode) {
+                iconSvg = icons.barChart;
+            }
+            const hasCalc = term.inputs ? `<span class="calc-icon ${term.aiMode ? 'ai' : ''}" title="${term.aiMode ? '推定' : '計算可能'}">${iconSvg}</span>` : '';
             
             el.innerHTML = `
                 <div class="card-header">
@@ -1733,7 +1815,7 @@
         switch(cat){
             case 'bat': return "#0ea5e9";
             case 'pit': return "#f43f5e";
-            case 'fld': return "#f59e0b";
+            case 'fld': return "#d97706";
             case 'tot': return "#10b981";
             case 'std': return "#6366f1";
             default: return "#64748b";
@@ -1820,25 +1902,31 @@
                 const advInputsHtml = advancedInputs.map(inp => createInputHtml(inp)).join('');
                 advancedSectionHtml = `
                     <details class="advanced-details">
-                        <summary class="advanced-summary">詳細設定 (リーグ平均値など)</summary>
+                        <summary class="advanced-summary">
+                            <span class="icon-gear">${icons.gear}</span>
+                            詳細設定 (リーグ平均値など)
+                        </summary>
                         <div class="advanced-content">
                             ${advInputsHtml}
                         </div>
                         <div id="warning-box" class="warning-msg" style="display:none;">
-                            ⚠️ 詳細設定を変更すると精度が落ちる可能性があります
+                            詳細設定を変更すると精度が落ちる可能性があります
                         </div>
                     </details>
                 `;
             }
 
             const aiClass = term.aiMode ? 'ai-mode' : '';
-            // 文言変更: ESTIMATER -> ESTIMATOR
-            const aiIcon = term.aiMode ? '📊' : '🧮';
+            const aiIcon = term.aiMode ? icons.barChart : icons.calculator;
             const aiText = term.aiMode ? '推定を実行' : 'CALCULATE';
             const titleText = term.aiMode ? 'ESTIMATOR' : 'SIMULATOR';
+            const calcBtnIcon = term.aiMode ? icons.barChart : icons.calculator;
+            const delIcon = icons.trash;
+            const saveIcon = icons.save;
 
+            // 見出しの句点を削除
             calcHtml = `
-                <div class="section-label">LABORATORY / ${aiText}</div>
+                <div class="section-label has-hash">LABORATORY / ${aiText}</div>
                 <div class="calc-container ${aiClass}" id="calc-container">
                     <div class="calc-title">
                         <div><span>${aiIcon}</span> ${term.title} ${titleText}</div>
@@ -1846,12 +1934,12 @@
                     
                     <!-- Preset Controls -->
                     <div class="preset-bar">
-                        <div class="preset-label">💾 成績プリセット (自動入力)</div>
+                        <div class="preset-label">${saveIcon} 成績プリセット (自動入力)</div>
                         <select class="preset-select" id="preset-select">
                             <option value="">保存データを選択...</option>
                         </select>
                         <button type="button" class="preset-btn btn-load" onclick="loadPreset()">読込</button>
-                        <button type="button" class="preset-btn btn-del" onclick="removePreset()" title="削除">🗑️</button>
+                        <button type="button" class="preset-btn btn-del" onclick="removePreset()" title="削除">${delIcon}</button>
                         <div style="flex-basis: 100%; height: 0; margin: 0;"></div> <!-- Line break for visual -->
                         <input type="text" class="preset-input" id="preset-name" placeholder="新規保存名 (例: 2024山田)">
                         <button type="button" class="preset-btn btn-save" onclick="savePreset()">保存</button>
@@ -1862,10 +1950,9 @@
                         ${advancedSectionHtml}
                     </div>
                     <button class="calc-btn" onclick="calculateMetric('${term.id}')">
-                        ${aiText}
+                        ${calcBtnIcon} ${aiText}
                     </button>
                     <div class="calc-result-area">
-                        <!-- 文言変更: ESTIMATED -> 推定値 -->
                         <div class="calc-res-label">RESULT ${term.aiMode ? '<span>推定値</span>' : ''}:</div>
                         <div class="calc-res-value" id="calc-result">---</div>
                     </div>
@@ -1888,17 +1975,17 @@
             <p style="font-size:1.2rem; font-weight:700; line-height:1.6; color:var(--c-text-primary);">${term.short}</p>
             ${term.desc ? `<p style="color:var(--c-text-secondary); line-height:1.8;">${term.desc}</p>` : ''}
 
-            <div class="section-label">計算式 / FORMULA</div>
+            <div class="section-label has-hash">計算式 / FORMULA</div>
             <div class="formula-box">${term.formula}</div>
 
             ${calcHtml}
 
-            <div class="section-label">評価基準 / CRITERIA</div>
+            <div class="section-label has-hash">評価基準 / CRITERIA</div>
             <table class="criteria-table">
                 <tr><th>目安</th><td>${term.criteria || '---'}</td></tr>
             </table>
 
-            <div class="section-label">関連指標 / RELATED</div>
+            <div class="section-label has-hash">関連指標 / RELATED</div>
             <div class="related-grid">${relatedHtml || '<span style="color:#94a3b8; font-size:0.9rem">なし</span>'}</div>
         `;
 
@@ -2030,32 +2117,36 @@
         const parserHtml = `
             <div class="parser-area" style="border-color:${catColor}">
                 <div style="font-size:0.8rem; font-weight:700; color:var(--c-text-secondary); margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>🤖 AIテキスト解析 (AI ANALYZER)</span>
+                    <span>${icons.sparkle} AIテキスト解析 (AI ANALYZER)</span>
                     <span style="font-size:0.7em; background:#e2e8f0; padding:2px 6px; border-radius:4px;">TEXT MODE</span>
                 </div>
                 <textarea class="parser-textarea" id="smart-text" placeholder="ここにWebサイトの成績表などをコピー＆ペーストしてください...&#13;&#10;（例：打率.300 試合143 本塁打20...）"></textarea>
                 
                 <button class="parser-btn" id="parser-btn" onclick="parseSmartContent('${mode}')" style="background:${catColor}">
-                    <span>✨</span> AIでテキストを解析して入力
+                    <span>${icons.sparkle}</span> AIでテキストを解析して入力
                 </button>
                 <div id="parser-msg" style="font-size:0.85rem; color:var(--c-text-secondary); margin-top:10px; text-align:center; display:none; line-height:1.5;"></div>
             </div>
         `;
 
+        const saveIcon = icons.save;
+        const delIcon = icons.trash;
+        const gearIcon = icons.gear;
+
         const html = `
-            <div class="section-label">INPUT DATA / データ入力</div>
+            <div class="section-label has-hash">INPUT DATA / データ入力</div>
             <div class="calc-container" style="border-color:${catColor}">
                 
                 ${parserHtml}
 
                 <!-- Preset Controls -->
                 <div class="preset-bar">
-                    <div class="preset-label">💾 成績プリセット (自動入力)</div>
+                    <div class="preset-label">${saveIcon} 成績プリセット (自動入力)</div>
                     <select class="preset-select" id="preset-select">
                         <option value="">保存データを選択...</option>
                     </select>
                     <button type="button" class="preset-btn btn-load" onclick="loadPreset()">読込</button>
-                    <button type="button" class="preset-btn btn-del" onclick="removePreset()" title="削除">🗑️</button>
+                    <button type="button" class="preset-btn btn-del" onclick="removePreset()" title="削除">${delIcon}</button>
                     <div style="flex-basis: 100%; height: 0; margin: 0;"></div> <!-- Line break for visual -->
                     <input type="text" class="preset-input" id="preset-name" placeholder="新規保存名 (例: 2024山田)">
                     <button type="button" class="preset-btn btn-save" onclick="savePreset()">保存</button>
@@ -2064,14 +2155,17 @@
                 <div class="calc-inputs">
                     ${inputsHtml}
                     <details class="advanced-details">
-                        <summary class="advanced-summary">詳細設定 (リーグ平均値など)</summary>
+                        <summary class="advanced-summary">
+                            <span class="icon-gear">${gearIcon}</span>
+                            詳細設定 (リーグ平均値など)
+                        </summary>
                         <div class="advanced-content">
                             ${advInputsHtml}
                         </div>
                     </details>
                 </div>
                 <button class="calc-btn" style="background:${catColor}" onclick="runBatchCalc('${mode}')">
-                    一括計算実行 (CALCULATE ALL)
+                    ${icons.barChart} 一括計算実行 (CALCULATE ALL)
                 </button>
             </div>
             <div id="batch-results-area" style="margin-top:30px;"></div>
@@ -2105,13 +2199,13 @@
         }
 
         // AI分析演出
-        btn.innerHTML = '<span>⏳</span> テキスト構造を解析中...';
+        btn.innerHTML = `${icons.loader} テキスト構造を解析中...`;
         btn.classList.add('analyzing');
         msg.style.display = 'none';
 
         setTimeout(() => {
             // 解析実行
-            btn.innerHTML = '<span>✨</span> AIでテキストを解析して入力';
+            btn.innerHTML = `${icons.sparkle} AIでテキストを解析して入力`;
             btn.classList.remove('analyzing');
             
             runParser(text, mode);
@@ -2145,7 +2239,14 @@
         for (const [key, id] of Object.entries(map)) {
             // Regex: Label followed by space/colon/tab, then number
             const regex = new RegExp(`${key}[:\\s　]*([0-9]+(?:\\.[0-9]+)?)`, 'g');
-            const match = regex.exec(text);
+            let match;
+            // Need to handle regex.exec(text) iteration correctly if text contains multiple matches for one key (e.g., '四球 20 四球 30')
+            // For simplicity, we use matchAll and take the last match.
+            const matches = [...text.matchAll(regex)];
+            if(matches.length > 0) {
+                match = matches[matches.length - 1]; // Take the last match
+            }
+
             if(match) {
                 const val = parseFloat(match[1]);
                 const el = document.getElementById(`calc-${id}`);
@@ -2163,9 +2264,9 @@
         if (count > 0) {
             msg.innerHTML = `
                 <div style="color:var(--cat-tot); font-weight:bold;">
-                    ✅ 解析完了: ${count} 項目を抽出しました
+                    ${icons.sparkle} 解析完了: ${count} 項目を抽出しました
                 </div>
-                <div style="font-size:0.8em; color:#64748b;">
+                <div style="font-size:0.8em; color:var(--c-text-secondary);">
                     検出: ${extractedInfo.join(', ')}${extractedInfo.length>=6 ? '...' : ''}
                 </div>
             `;
@@ -2245,7 +2346,7 @@
         }
 
         let tableHtml = `
-            <div class="section-label">ANALYSIS RESULTS / 分析結果</div>
+            <div class="section-label has-hash">ANALYSIS RESULTS / 分析結果</div>
             ${radarHtml}
             <table class="criteria-table" style="margin-top:20px;">
                 <thead>
@@ -2278,9 +2379,10 @@
 
         tableHtml += `</tbody></table>`;
         
+        // 📋をSVGに置き換え
         tableHtml += `
             <button class="calc-btn" style="margin-top:20px; background:var(--c-text-secondary);" onclick="copyBatchResults()">
-                📋 結果をコピー (COPY TEXT)
+                ${icons.clipboard} 結果をコピー (COPY TEXT)
             </button>
         `;
 
@@ -2355,7 +2457,7 @@
                 const scoreSiera = Math.min(100, Math.max(0, (6.00 - siera) / 4.00 * 100));
                 
                 // 5. GB% (Groundball): 30% - 60%
-                const gb_pct = data.gb > 0 ? data.gb / (data.gb + data.fb + data.pu) : 0.45;
+                const gb_pct = parseFloat(data.gb_type || 45) / 100;
                 const scoreGb = Math.min(100, Math.max(0, (gb_pct - 0.30) / 0.30 * 100));
 
                 labels = ['K%', 'BB%', 'xFIP', 'SIERA', 'GB%'];
@@ -2384,7 +2486,10 @@
                             ticks: { display: false }, // Hide numbers
                             pointLabels: {
                                 font: { size: 14, weight: '800', family: 'var(--font-mono)' },
-                                color: '#475569'
+                                color: document.body.classList.contains('dark-mode') ? '#94a3b8' : '#475569'
+                            },
+                            grid: {
+                                color: document.body.classList.contains('dark-mode') ? 'rgba(51, 65, 85, 0.5)' : 'rgba(203, 213, 225, 0.5)'
                             }
                         }
                     },
