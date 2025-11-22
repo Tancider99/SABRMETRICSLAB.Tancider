@@ -429,7 +429,7 @@
             position: relative; /* For ocr button positioning */
         }
         .calc-container.ai-mode {
-            background: rgba(139, 92, 246, 0.05);
+            background: rgba(139, 92, 46, 0.05);
             border-color: var(--ai-color);
         }
         .calc-container.ai-mode .calc-title span { color: var(--ai-color); }
@@ -965,7 +965,8 @@
     // --- 新規追加: 打球内訳の推定ロジック ---
     function estimateBattedBalls(d) {
         // 既に実数がある場合は計算しない（再計算防止）
-        if (d.est_done) return d;
+        // NOTE: dにはリーグ平均値が含まれるため、再計算防止はここでは行わない方が良い
+        // if (d.est_done) return d; 
         
         // リーグ総本塁打を使用
         const lg_hr = d.lg_hr || DEFAULTS.LG_HR;
@@ -1035,7 +1036,12 @@
         const roe = Math.max(0, d.pa - (d.ab + d.bb + d.hbp + d.sf + d.sh));
 
         // 単打 (S)
-        const s = d.h - d.d - d.t - d.hr;
+        // Note: d.h must be defined. Assuming it is 0 if undefined.
+        const h = d.h || 0;
+        const d_val = d.d || 0;
+        const t = d.t || 0;
+        const hr = d.hr || 0;
+        const s = h - d_val - t - hr;
 
         return { ibb, roe, s };
     }
@@ -1359,7 +1365,10 @@
             desc: "長打率から打率を引いて算出する。単打を無視し、二塁打以上を打つ能力のみを評価する",
             formula: `${formatVar('長打率')} - ${formatVar('打率')}`,
             criteria: ".140: 平均 / .250: 強打者",
-            inputs: [{id:'slg', label:'長打率'}, {id:'avg', label:'打率'}],
+            inputs: [
+                {id:'slg', label:'長打率', default: 0.400}, 
+                {id:'avg', label:'打率', default: 0.250}
+            ],
             calc: (d) => (d.slg - d.avg).toFixed(3).replace(/^0/,'')
         },
         {
@@ -1543,7 +1552,7 @@
                 
                 // d.fb は estimateBattedBalls で生成されている
                 const term1 = 13 * C.lg_xfip_ratio * d.fb;
-                const term2 = 3 * (d.bb - est.ibb + d.hbp);
+                const term2 = 3 * (d.bb - est_ibb + d.hbp);
                 const term3 = 2 * d.so;
                 
                 // xFIP = (13 * lg_xfip_ratio * FB + 3 * (BB - IBB + HBP) - 2 * SO) / IP + xfip_constant
@@ -2435,11 +2444,18 @@
                 data[id] = parseFloat(el.value) || 0;
             }
         });
+        
+        // 必須のリーグ平均値をデータオブジェクトに注入 (calcDerivedの依存関係を解決するため)
+        ADVANCED_LEAGUE_INPUTS.forEach(inp => {
+            const id = inp.id;
+            const el = document.getElementById(`calc-${id}`);
+            data[id] = parseFloat(el.value) || inp.default || 0;
+        });
 
         // Calculate Indicators
         let results = [];
         
-        // ユーザー指定の指標IDリスト (修正: wRC+, xFIP, SIERAを含める)
+        // ユーザー指定の指標IDリストを更新 (ISO, xFIPを追加)
         const targetIds = isBat ? 
             ['war', 'wrc_plus', 'woba', 'iso', 'babip', 'k_pct', 'bb_pct', 'wsb'] : 
             ['pit_war', 'fip', 'xfip', 'siera', 'k_pct_pit', 'bb_pct_pit'];
@@ -2447,6 +2463,21 @@
         terms.forEach(term => {
             if (targetIds.includes(term.id) && term.calc) {
                 try {
+                    // ISO, wsb, wrc_plusが正しく計算されるよう、必要な入力を事前に準備
+                    if (isBat) {
+                        if (term.id === 'iso') {
+                            // ISOを計算するために必要なSLG, AVGを計算
+                            const tb = (data.h - (data.d+data.t+data.hr) + 2*data.d + 3*data.t + 4*data.hr) || 0;
+                            const slg = data.ab > 0 ? tb / data.ab : 0;
+                            const avg = data.ab > 0 ? data.h / data.ab : 0;
+                            data.slg = slg;
+                            data.avg = avg;
+                        } else if (term.id === 'k_pct' || term.id === 'bb_pct') {
+                            // K%とBB%の計算にはPAが必要
+                            if (data.pa === 0) return;
+                        }
+                    }
+
                     const res = term.calc(data);
                     if (res !== "---" && res !== "NaN" && res !== "Infinity") {
                         results.push({
@@ -2458,7 +2489,9 @@
                             id: term.id
                         });
                     }
-                } catch(e) {}
+                } catch(e) {
+                    console.error(`Error calculating ${term.id}:`, e);
+                }
             }
         });
 
@@ -2540,34 +2573,39 @@
             let scores = [];
             let labels = [];
             
-            // Helper to find calculated value from results or recalc
-            const getVal = (id) => {
-                const r = results.find(x => x.id === id);
-                if (r) return parseFloat(r.value);
-                // Fallback: recalc directly if missing from table
-                const t = terms.find(x => x.id === id);
-                return t ? parseFloat(t.calc(data)) : 0;
+            // Helper function to calculate raw metric values needed for the chart, even if they weren't in the table.
+            const calculateMetricValue = (id, inputData) => {
+                const term = terms.find(t => t.id === id);
+                if (term && term.calc) {
+                    try {
+                        const val = term.calc(inputData);
+                        return parseFloat(val) || 0;
+                    } catch(e) {
+                        return 0; // Return 0 if calculation fails
+                    }
+                }
+                return 0;
             };
 
             if (isBat) {
                 // Batting Scores
                 // 1. wRC+ (Overall Offense): 40(min) - 180(max) -> 100 is avg
-                const wrc = getVal('wrc_plus') || 100;
+                const wrc = calculateMetricValue('wrc_plus', data);
                 const scoreWrc = Math.min(100, Math.max(0, (wrc - 40) / 140 * 100));
                 
                 // 2. ISO (Power): .050 - .350
-                const slg = (data.h - data.d - data.t - data.hr + 2*data.d + 3*data.t + 4*data.hr) / data.ab || 0;
-                const avg = data.h / data.ab || 0;
+                const tb = (data.h - (data.d+data.t+data.hr) + 2*data.d + 3*data.t + 4*data.hr) || 0;
+                const slg = data.ab > 0 ? tb / data.ab : 0;
+                const avg = data.ab > 0 ? data.h / data.ab : 0;
                 const iso = slg - avg;
                 const scoreIso = Math.min(100, Math.max(0, (iso - 0.050) / 0.300 * 100));
                 
                 // 3. wSB (Speed/Running): -5 - +10
-                // wSB is not in default batch targets sometimes, so ensure calculation
-                const wsb = getVal('wsb') || (0.2*data.sb - 0.4*data.cs) || 0; 
+                const wsb = calculateMetricValue('wsb', data);
                 const scoreWsb = Math.min(100, Math.max(0, (wsb - (-5)) / 15 * 100));
                 
                 // 4. BB% (Eye): 3% - 18%
-                const bb_pct = data.bb / data.pa || 0;
+                const bb_pct = data.pa > 0 ? data.bb / data.pa : 0;
                 const scoreBb = Math.min(100, Math.max(0, (bb_pct - 0.03) / 0.15 * 100));
                 
                 // 5. UZR (Defense): -15 - +15
@@ -2580,19 +2618,19 @@
             } else {
                 // Pitching Scores
                 // 1. K% (Stuff): 10% - 35%
-                const k_pct = data.so / data.bf || 0;
+                const k_pct = data.bf > 0 ? data.so / data.bf : 0;
                 const scoreK = Math.min(100, Math.max(0, (k_pct - 0.10) / 0.25 * 100));
                 
                 // 2. BB% (Control): 15% - 2% (Reverse)
-                const bb_pct = data.bb / data.bf || 0.10;
+                const bb_pct = data.bf > 0 ? data.bb / data.bf : 0.10;
                 const scoreBb = Math.min(100, Math.max(0, (0.15 - bb_pct) / 0.13 * 100));
                 
                 // 3. xFIP (Expected Performance): 6.00 - 2.00 (Reverse)
-                const xfip = getVal('xfip') || 4.00;
+                const xfip = calculateMetricValue('xfip', data); // Recalculate xFIP using input data
                 const scoreXfip = Math.min(100, Math.max(0, (6.00 - xfip) / 4.00 * 100));
                 
                 // 4. SIERA (True Skill): 6.00 - 2.00 (Reverse)
-                const siera = getVal('siera') || 4.00;
+                const siera = calculateMetricValue('siera', data); // Recalculate SIERA using input data
                 const scoreSiera = Math.min(100, Math.max(0, (6.00 - siera) / 4.00 * 100));
                 
                 // 5. GB% (Groundball): 30% - 60%
