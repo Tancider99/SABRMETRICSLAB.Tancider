@@ -4043,28 +4043,39 @@
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
         z-index: 9999;
-        display: none; opacity: 0;
-        transition: opacity 0.6s ease;
+        
+        /* 初期状態（非表示・少し拡大） */
+        visibility: hidden;
+        opacity: 0;
+        transform: scale(1.1);
+        
+        /* 画面切り替えアニメーション（ふわっとズームイン） */
+        transition: 
+            opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+            transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1),
+            visibility 0.5s;
+            
         overflow: hidden;
         cursor: grab;
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
-        perspective: 1000px; /* 3D演出用 */
+        perspective: 1000px;
     }
-    #galaxy-overlay.active { display: flex; opacity: 1; }
+    
+    /* 表示状態 */
+    #galaxy-overlay.active { 
+        visibility: visible;
+        opacity: 1;
+        transform: scale(1);
+    }
+    
     #galaxy-overlay:active { cursor: grabbing; }
 
     /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0.6; pointer-events: none; transition: transform 0.2s;
-    }
-    /* 起動時のワープ効果 */
-    #galaxy-overlay.launching .star {
-        opacity: 0.8;
-        transform: scale(1, 15); /* 縦に引き伸ばして流線にする */
-        transition: transform 0.8s cubic-bezier(0.2, 1, 0.3, 1);
+        opacity: 0.6; pointer-events: none;
     }
 
     /* --- Universe Wrapper --- */
@@ -4074,30 +4085,22 @@
         backface-visibility: hidden;
     }
 
-    /* --- Cosmos Container (Animation Wrapper) --- */
+    /* --- Cosmos Container --- */
     #galaxy-cosmos {
         position: absolute; top: 0; left: 0; width: 0; height: 0;
         transform-style: preserve-3d;
-    }
-    
-    /* 銀河の出現アニメーション */
-    .launching #galaxy-cosmos {
-        animation: galaxyLaunch 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-    }
-    @keyframes galaxyLaunch {
-        0% { transform: scale(0) rotate(45deg); opacity: 0; }
-        100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
 
     /* --- Nodes --- */
     .g-node {
         position: absolute;
         width: var(--g-node-size); height: var(--g-node-size);
-        transform: translate(-50%, -50%) scale(0); /* 初期状態はスケール0 */
+        transform: translate(-50%, -50%) scale(0); /* 初期はスケール0 */
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s;
+        /* トランジション設定（ディム時のフィルター変化も含む） */
+        transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s, filter 0.3s;
         box-shadow: 0 0 15px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
         z-index: 10;
@@ -4106,9 +4109,10 @@
         font-weight: 700;
         font-size: var(--g-font-size);
         touch-action: none;
-        /* ポップアップアニメーション */
+        
+        /* 出現アニメーション */
         animation: nodePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-        animation-play-state: paused; /* JSで開始 */
+        animation-play-state: paused; 
     }
     @keyframes nodePop {
         from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
@@ -4124,9 +4128,23 @@
         }
     }
 
-    .g-node.is-dimmed { opacity: 0.1; transform: translate(-50%, -50%) scale(0.8); pointer-events: none; }
-    .g-node.is-related { opacity: 1; border-color: rgba(255,255,255,0.9); z-index: 40; }
-    @media (min-width: 769px) { .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.15); } }
+    /* 【復活】フォーカス中に関係ない部分は暗くなる */
+    .g-node.is-dimmed {
+        opacity: 0.1 !important;
+        transform: translate(-50%, -50%) scale(0.8) !important;
+        pointer-events: none;
+        filter: grayscale(100%); /* 色味も落とす */
+    }
+    
+    /* 関連ノード */
+    .g-node.is-related {
+        opacity: 1 !important;
+        border-color: rgba(255,255,255,0.9);
+        z-index: 40;
+    }
+    @media (min-width: 769px) { 
+        .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.2); } 
+    }
 
     /* Focused State */
     .g-node.is-focused {
@@ -4149,6 +4167,7 @@
     .g-node.is-focused .g-content-focus { display: flex; opacity: 1; animation: fadeIn 0.3s ease forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* Detail Content */
     .gf-icon svg { width: 40px; height: 40px; margin-bottom: 8px; opacity: 1; }
     .gf-title { font-size: 1.6rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; color: white; }
     .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
@@ -4165,9 +4184,12 @@
     /* Lines */
     #galaxy-lines { position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px; pointer-events: none; z-index: 1; }
     .g-line { stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: opacity 0.3s; opacity: 0; }
-    .active .g-line { animation: lineFadeIn 1s 0.8s forwards; } /* 遅れてライン表示 */
+    .active .g-line { animation: lineFadeIn 1s 0.5s forwards; }
     @keyframes lineFadeIn { to { opacity: 1; } }
-    .g-line.is-dimmed { opacity: 0.05 !important; }
+    
+    /* ディム時の線 */
+    .g-line.is-dimmed { opacity: 0.02 !important; }
+    /* 関連時の線 */
     .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1 !important; }
 
     /* Category Colors */
@@ -4182,7 +4204,7 @@
         display: flex; gap: 12px; z-index: 1000;
         padding: 8px 16px; border-radius: 40px;
         background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);
-        opacity: 0; animation: fadeIn 1s 1.2s forwards; /* コントロールも遅れて登場 */
+        opacity: 0; animation: fadeIn 1s 0.5s forwards;
     }
     .g-btn {
         background: transparent; border: none; color: rgba(255,255,255,0.8); padding: 0; border-radius: 50%; cursor: pointer;
@@ -4217,7 +4239,12 @@
 
     let isInitialized = false;
     let nodesData = [];
-    let viewState = { scale: 0.35, panX: 0, panY: 0, isDragging: false, lastX: 0, lastY: 0, isPinching: false, pinchStartDist: 0, pinchStartScale: 1, suppressClick: false };
+    let viewState = { 
+        scale: 0.35, panX: 0, panY: 0, 
+        isDragging: false, lastX: 0, lastY: 0, 
+        isPinching: false, pinchStartDist: 0, pinchStartScale: 1,
+        suppressClick: false 
+    };
     const MAX_SCALE = 1.2; const MIN_SCALE = 0.35;
 
     const CATEGORY_CENTERS = { 'tot': { x: 0, y: 0 }, 'std': { x: 0, y: -450 }, 'bat': { x: 800, y: 0 }, 'pit': { x: -800, y: 0 }, 'fld': { x: 0, y: 650 } };
@@ -4305,8 +4332,7 @@
         el.id = `g-node-${node.id}`;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
-        // ランダムな遅延時間をセットしてシーケンシャルポップアップを実現
-        el.style.animationDelay = `${Math.random() * 0.8 + 0.2}s`;
+        el.style.animationDelay = `${Math.random() * 0.8 + 0.1}s`;
 
         const iconSvg = gIcons[node.category] || gIcons.std;
         
@@ -4337,23 +4363,17 @@
         resetFocus();
         const currentId = node.id;
         const relatedIds = node.links || [];
-        const extendedIds = new Set(relatedIds);
-        relatedIds.forEach(rid => {
-            const rNode = nodesData.find(n => n.id === rid);
-            if(rNode && rNode.links) rNode.links.forEach(rid2 => extendedIds.add(rid2));
-        });
-
+        // 関連のみを強調（1次のみ）
         document.querySelectorAll('.g-node').forEach(el => {
             const elId = el.id.replace('g-node-', '');
             if(elId === currentId) el.classList.add('is-focused');
-            else if(extendedIds.has(elId)) el.classList.add('is-related');
+            else if(relatedIds.includes(elId)) el.classList.add('is-related');
             else el.classList.add('is-dimmed');
         });
 
         document.querySelectorAll('.g-line').forEach(line => {
             const src = line.getAttribute('data-src'), tgt = line.getAttribute('data-tgt');
             if((src===currentId && relatedIds.includes(tgt)) || (tgt===currentId && relatedIds.includes(src))) line.classList.add('is-related');
-            else if(extendedIds.has(src) && extendedIds.has(tgt)) line.classList.add('is-dimmed');
             else line.classList.add('is-dimmed');
         });
 
@@ -4382,22 +4402,18 @@
         initGalaxy();
         gOverlay.classList.add('active');
         
-        // エフェクト用クラスの付与
-        gOverlay.classList.add('launching');
-        // ノードアニメーションの再生開始
+        // ノードアニメーションの再生
         document.querySelectorAll('.g-node').forEach(el => {
             el.style.animationPlayState = 'running';
         });
 
         fitToScreen();
-        
-        // アニメーション終了後にクラスを外す
-        setTimeout(() => { gOverlay.classList.remove('launching'); }, 1500);
     }
 
     function closeMindMap() { gOverlay.classList.remove('active'); resetFocus(); }
     
     function updateTransform() { gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`; }
+    
     function fitToScreen() {
         viewState.panX = 0; viewState.panY = 0;
         const minDim = Math.min(window.innerWidth, window.innerHeight);
