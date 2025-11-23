@@ -2981,20 +2981,18 @@
         }, 800); // 演出用のウェイト
     };
 
-    function runParser(text, mode) {
+    // --- 更新: 既存のrunParserをasync化し、失敗時にAIパーサーを呼び出すように変更 ---
+    async function runParser(text, mode) {
         const msg = document.getElementById('parser-msg');
         
-        // AI Analysis Logic (Advanced Regex Pattern Matching)
-        // Added synonyms for better matching
+        // 既存の正規表現ロジック (Regex Logic)
         const mapBat = {
             '打席': 'pa', '打数': 'ab', '安打': 'h', '二塁打': 'd', '三塁打': 't', '本塁打': 'hr', '本': 'hr', 'HR': 'hr',
             '四球': 'bb', '死球': 'hbp', '三振': 'so', '犠飛': 'sf', '犠打': 'sh', '盗塁': 'sb', '盗塁死': 'cs', '併殺': 'gidp'
         };
         const mapPit = {
-            // 修正: WHIPの"IP"に反応しないように (?<!WH) を追加
             '回': 'ip', '投球回': 'ip', 'IP': 'ip', 
             '失点': 'r', '自責': 'er', '被安打': 'h', '被本塁打': 'hr', '被本': 'hr',
-            // 修正: 無四球の"四球"に反応しないように (?<!無) を追加
             '与四球': 'bb', '四球': 'bb', 
             '与死球': 'hbp', '死球': 'hbp', '奪三振': 'so', '三振': 'so', '打者': 'bf'
         };
@@ -3005,13 +3003,12 @@
 
         for (const [key, id] of Object.entries(map)) {
             // Regex: Label followed by space/colon/tab, then number
+            // 誤検知防止のため、前方に文字がないか確認するロジックなどは維持
             const regex = new RegExp(`${key}[:\\s　]*([0-9]+(?:\\.[0-9]+)?)`, 'g');
             let match;
-            // Need to handle regex.exec(text) iteration correctly if text contains multiple matches for one key (e.g., '四球 20 四球 30')
-            // For simplicity, we use matchAll and take the last match.
             const matches = [...text.matchAll(regex)];
             if(matches.length > 0) {
-                match = matches[matches.length - 1]; // Take the last match
+                match = matches[matches.length - 1]; 
             }
 
             if(match) {
@@ -3038,15 +3035,123 @@
                 </div>
             `;
         } else {
+            // --- 変更点: 正規表現で取れなかった場合、AIパーサーを起動 ---
             msg.innerHTML = `
-                <div style="color:#ef4444;">
-                    ❌ データが見つかりませんでした。<br>
-                    「打率.300 本塁打20」のように項目名と数字が含まれるテキストを貼り付けてください。
+                <div style="color:var(--c-text-secondary); margin-bottom:5px;">
+                    正規表現での抽出に失敗しました。AI解析を試みます...
                 </div>
             `;
+            // AI解析を実行
+            await runAIParser(text, mode);
         }
     }
 
+    // --- 追加: Gemini APIを使用したAI解析関数 ---
+    async function runAIParser(text, mode) {
+        const msg = document.getElementById('parser-msg');
+        
+        // 1. APIキーの取得（localStorageから）
+        let apiKey = localStorage.getItem('gemini_api_key');
+        if (!apiKey) {
+            apiKey = prompt("高度な解析を行うにはGoogle Gemini APIキーが必要です。\n(キーはブラウザにのみ保存され、外部には送信されません)\n\nAPIキーを入力してください:");
+            if (!apiKey) {
+                msg.innerHTML = `<div style="color:#ef4444;">❌ APIキーが入力されなかったため解析を中止しました。</div>`;
+                return;
+            }
+            localStorage.setItem('gemini_api_key', apiKey);
+        }
+
+        msg.innerHTML = `<div style="color:var(--ai-color); font-weight:bold; animation: pulse 1s infinite;">🤖 AIが文脈を解析中...</div>`;
+
+        // 2. 抽出対象フィールドの定義
+        const targetFields = mode === 'bat'
+            ? { pa:'打席', ab:'打数', h:'安打', d:'二塁打', t:'三塁打', hr:'本塁打', bb:'四球', hbp:'死球', so:'三振', sf:'犠飛', sb:'盗塁', cs:'盗塁死', avg:'打率' }
+            : { ip:'投球回', r:'失点', er:'自責点', h:'被安打', hr:'被本塁打', bb:'与四球', so:'奪三振', bf:'打者数', era:'防御率' };
+
+        // 3. プロンプトの構築
+        const promptText = `
+            あなたは野球の成績データを抽出するアシスタントです。
+            以下のテキストから、${mode === 'bat' ? '野手' : '投手'}の成績数値を抽出し、JSON形式で返してください。
+            
+            入力テキスト:
+            """
+            ${text}
+            """
+
+            出力すべきJSONのキー: ${Object.keys(targetFields).join(', ')}
+
+            ルール:
+            1. テキスト内に該当する数値があれば抽出してください。見つからない場合はJSONに含めないでください。
+            2. "ip"(投球回)が "6.1" (6回1/3) や "6 2/3" のような表記の場合、計算可能な数値 (6.333 や 6.666) に変換してください。
+            3. 余計な解説は不要です。純粋なJSONオブジェクトのみを返してください。
+            4. マークダウン記法(\`\`\`json)は含めないでください。
+        `;
+
+        try {
+            // 4. API呼び出し
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: promptText }] }]
+                })
+            });
+
+            if (!response.ok) {
+                if (response.status === 400 || response.status === 403) {
+                    localStorage.removeItem('gemini_api_key'); // 無効なキーなら削除
+                    throw new Error("APIキーが無効か、エラーが発生しました。");
+                }
+                throw new Error(`API Error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            
+            // 5. 結果のパース
+            let rawResult = data.candidates[0].content.parts[0].text;
+            // JSONの整形（マークダウンが混入した場合の除去）
+            rawResult = rawResult.replace(/```json|```/g, '').trim();
+            
+            const resultObj = JSON.parse(rawResult);
+            
+            let aiCount = 0;
+            let aiExtracted = [];
+
+            // 6. フォームへの入力
+            for (const [key, val] of Object.entries(resultObj)) {
+                // 数値型に変換できるかチェック
+                const numVal = parseFloat(val);
+                if (!isNaN(numVal)) {
+                    const el = document.getElementById(`calc-${key}`);
+                    if (el) {
+                        el.value = numVal;
+                        el.style.backgroundColor = "#f3e8ff"; // AI Fill Color (Purple tint)
+                        setTimeout(() => el.style.backgroundColor = "", 2500);
+                        aiCount++;
+                        aiExtracted.push(targetFields[key] || key);
+                    }
+                }
+            }
+
+            if (aiCount > 0) {
+                msg.innerHTML = `
+                    <div style="color:var(--ai-color); font-weight:bold;">
+                        ${icons.sparkle} AI解析完了: ${aiCount} 項目を抽出しました
+                    </div>
+                    <div style="font-size:0.8em; color:var(--c-text-secondary);">
+                        検出: ${aiExtracted.join(', ')}
+                    </div>
+                `;
+            } else {
+                msg.innerHTML = `<div style="color:#ef4444;">❌ AIでも数値を認識できませんでした。</div>`;
+            }
+
+        } catch (e) {
+            console.error(e);
+            msg.innerHTML = `<div style="color:#ef4444;">❌ エラー: ${e.message}</div>`;
+        }
+    }
+    
     let radarChartInstance = null;
 
     function runBatchCalc(mode) {
