@@ -2639,6 +2639,22 @@
             let advancedSectionHtml = '';
             if (advancedInputs.length > 0) {
                 const advInputsHtml = advancedInputs.map(inp => createInputHtml(inp)).join('');
+                
+                // --- 追加: リーグ設定用プリセットUI ---
+                const leaguePresetHtml = `
+                    <div class="preset-bar" style="margin-bottom:15px; background:rgba(255,255,255,0.5); border:1px dashed var(--c-border);">
+                        <div class="preset-label" style="width:auto; margin-right:auto;">${icons.gear} リーグ設定プリセット</div>
+                        <select class="preset-select" id="league-preset-select" style="min-width:100px; font-size:0.85rem; padding:6px;">
+                            <option value="">設定を選択...</option>
+                        </select>
+                        <button type="button" class="preset-btn btn-load" onclick="loadLeaguePreset()" style="padding:6px 10px; font-size:0.75rem;">読込</button>
+                        <button type="button" class="preset-btn btn-del" onclick="removeLeaguePreset()" title="削除" style="padding:6px 10px;">${icons.trash}</button>
+                        <input type="text" class="preset-input" id="league-preset-name" placeholder="設定名 (例: 2023セ)" style="min-width:100px; font-size:0.85rem; padding:6px;">
+                        <button type="button" class="preset-btn btn-save" onclick="saveLeaguePreset()" style="padding:6px 10px; font-size:0.75rem;">保存</button>
+                    </div>
+                `;
+                // --------------------------------------
+
                 advancedSectionHtml = `
                     <details class="advanced-details">
                         <summary class="advanced-summary">
@@ -2646,7 +2662,7 @@
                             詳細設定 (リーグ平均値など)
                         </summary>
                         <div class="advanced-content">
-                            ${advInputsHtml}
+                            ${leaguePresetHtml}  ${advInputsHtml}
                         </div>
                         <div id="warning-box" class="warning-msg" style="display:none;">
                             詳細設定を変更すると精度が落ちる可能性があります
