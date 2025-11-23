@@ -2439,6 +2439,396 @@
             short: "最も洗練された防御率指標",
             desc: "Baseball Prospectusが算出。球場、守備、捕手のフレーミング、対戦打者の質、気温などあらゆる要素を調整した「投手の真の責任失点率」。",
             criteria: "失点率スケール"
+        },
+        {
+            id: "wrc", category: "bat", title: "wRC", full: "weighted Runs Created",
+            short: "打者が創出した総得点数（wRAAベース）",
+            desc: "wRC+の元となる積み上げ指標。平均的な打者と比較したwRAAに、リーグ平均レベルの得点創出数を加えて算出する。RCよりも厳密な得点価値に基づく。",
+            formula: `wRAA + (リーグ平均得点率 × 打席数)`,
+            criteria: "積み上げ指標",
+            related: ["wrc_plus", "wraa"],
+            inputs: [
+                // wRAA計算用
+                {id:'pa', label:'打席数'}, {id:'ab', label:'打数'},
+                {id:'h', label:'安打'}, {id:'d', label:'二塁打'}, {id:'t', label:'三塁打'}, {id:'hr', label:'本塁打'}, 
+                {id:'bb', label:'四球'}, {id:'hbp', label:'死球'}, {id:'sf', label:'犠飛'},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                ...ADVANCED_LEAGUE_INPUTS
+            ],
+            calc: (d) => {
+                const C = calcDerived(d);
+                const est = estimateDetails(d);
+                const fr = C.fitting_ratio;
+                const pf = PARK_FACTORS[d.stadium].pf;
+    
+                // wOBA
+                const woba_denom = d.ab + d.bb - est.ibb + d.hbp + d.sf;
+                const woba_num = (0.692*fr)*(d.bb-est.ibb) + (0.73*fr)*d.hbp + (0.966*fr)*est.roe + (0.865*fr)*est.s + (1.334*fr)*d.d + (1.725*fr)*d.t + (2.065*fr)*d.hr;
+                const woba_val = woba_denom > 0 ? woba_num / woba_denom : 0;
+    
+                // wRAA
+                const raw_wraa = ((woba_val - C.lg_woba) / C.woba_scale) * d.pa;
+                const home_ratio = 0.5;
+                const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
+                const parkAdj = (1 - pf_coef) * C.lg_r_pa * d.pa;
+                const wraa = raw_wraa + parkAdj;
+    
+                // wRC = wRAA + (lg_R/PA * PA)
+                return (wraa + (C.lg_r_pa * d.pa)).toFixed(1);
+            }
+        },
+        {
+            id: "xslg", category: "bat", title: "xSLG", full: "Expected Slugging Percentage",
+            short: "期待長打率",
+            desc: "打球速度と角度から、打球が本来どの程度の長打になる確率があったかを推定した指標。実際のSLGとの乖離で運不運を測る。",
+            formula: "Statcast推定",
+            criteria: ".400: 平均",
+            related: ["slg", "xwoba"]
+        },
+        {
+            id: "xwobacon", category: "bat", title: "xwOBAcon", full: "xwOBA on Contact",
+            short: "打球のみのxwOBA（三振・四球除く）",
+            desc: "バットに当たった打球がどれだけ得点価値を持っていたかを示す。コンタクト能力は無視し、純粋な「破壊力」を評価する。",
+            formula: "Statcast推定",
+            criteria: ".370前後: 平均"
+        },
+        {
+            id: "barrels_pa", category: "bat", title: "Brls/PA%", full: "Barrels per Plate Appearance",
+            short: "打席あたりのバレル率",
+            desc: "全打席のうち、バレル打球（長打確率が非常に高い打球）を放った割合。長打力を示す信頼性の高い指標。",
+            formula: "バレル数 ÷ 打席数",
+            criteria: "4-5%: 平均 / 10%: 超一流"
+        },
+        {
+            id: "la_avg", category: "bat", title: "LA", full: "Average Launch Angle",
+            short: "平均打球角度",
+            desc: "打球の平均角度。10度〜20度がラインドライブ（安打になりやすい）、25度〜30度がフライ（本塁打になりやすい）とされる。",
+            formula: "平均値(度)",
+            criteria: "12度: 平均"
+        },
+        {
+            id: "ev_avg", category: "bat", title: "EV", full: "Average Exit Velocity",
+            short: "平均打球速度",
+            desc: "打球の平均速度。速いほど安打や長打になる確率が高い。近年最も重視される基礎能力の一つ。",
+            formula: "平均値(km/h or mph)",
+            criteria: "88mph (141km/h): 平均"
+        },
+        {
+            id: "max_ev", category: "bat", title: "MaxEV", full: "Maximum Exit Velocity",
+            short: "最高打球速度",
+            desc: "その選手が記録した最も速い打球速度。打者のポテンシャル（限界能力）を示す。",
+            criteria: "110mph (177km/h)以上: パワーヒッター"
+        },
+        {
+            id: "sweet_spot", category: "bat", title: "SweetSpot%", full: "Sweet Spot Percentage",
+            short: "最適角度（8〜32度）の打球割合",
+            desc: "ヒットや長打になりやすい角度（スイートスポット）で打球を放った割合。",
+            formula: "最適角度打球 ÷ 全打球",
+            criteria: "33%: 平均"
+        },
+        {
+            id: "pull_pct", category: "bat", title: "Pull%", full: "Pull Percentage",
+            short: "引っ張り方向への打球割合",
+            desc: "打球が引っ張り方向（右打者ならレフト側）に飛んだ割合。高いと長打力がある傾向だが、シフトを敷かれやすい。",
+            formula: "引張打球 ÷ 全打球",
+            criteria: "40%: 平均",
+            inputs: [{id:'pull', label:'引張打球数'}, {id:'bbe', label:'全打球数'}],
+            calc: (d) => d.bbe > 0 ? ((d.pull/d.bbe)*100).toFixed(1)+'%' : '---'
+        },
+        {
+            id: "oppo_pct", category: "bat", title: "Oppo%", full: "Opposite Field Percentage",
+            short: "逆方向への打球割合",
+            desc: "打球が流し方向（右打者ならライト側）に飛んだ割合。広角に打てる技術を示す。",
+            formula: "逆方向打球 ÷ 全打球",
+            criteria: "25%: 平均",
+            inputs: [{id:'oppo', label:'逆方向打球数'}, {id:'bbe', label:'全打球数'}],
+            calc: (d) => d.bbe > 0 ? ((d.oppo/d.bbe)*100).toFixed(1)+'%' : '---'
+        },
+        {
+            id: "gb_pct_bat", category: "bat", title: "GB% (Bat)", full: "Ground Ball Percentage (Batter)",
+            short: "打者のゴロ率",
+            desc: "打球に占めるゴロの割合。足の速い選手以外は低い方が好ましいとされる（ゴロは長打になりにくいため）。",
+            formula: "ゴロ ÷ 全打球",
+            criteria: "45%: 平均",
+            inputs: [{id:'gb', label:'ゴロ数'}, {id:'bbe', label:'全打球数'}],
+            calc: (d) => d.bbe > 0 ? ((d.gb/d.bbe)*100).toFixed(1)+'%' : '---'
+        },
+        {
+            id: "ld_pct", category: "bat", title: "LD%", full: "Line Drive Percentage",
+            short: "ライナー率",
+            desc: "打球に占めるライナーの割合。最も安打になりやすい打球。",
+            formula: "ライナー ÷ 全打球",
+            criteria: "21%: 平均",
+            inputs: [{id:'ld', label:'ライナー数'}, {id:'bbe', label:'全打球数'}],
+            calc: (d) => d.bbe > 0 ? ((d.ld/d.bbe)*100).toFixed(1)+'%' : '---'
+        },
+        {
+            id: "iffb_pct", category: "bat", title: "IFFB%", full: "Infield Fly Ball Percentage",
+            short: "内野フライ率",
+            desc: "フライに占める内野フライの割合。ほぼ自動的にアウトになるため、打者にとっては「最悪のフライ」。",
+            formula: "内野フライ ÷ 全フライ",
+            criteria: "10%: 平均",
+            inputs: [{id:'iffb', label:'内野フライ'}, {id:'fb', label:'全フライ'}],
+            calc: (d) => d.fb > 0 ? ((d.iffb/d.fb)*100).toFixed(1)+'%' : '---'
+        },
+        {
+            id: "swing_pct", category: "bat", title: "Swing%", full: "Swing Percentage",
+            short: "スイング率",
+            desc: "全投球に対してスイングした割合。積極性を示す。高すぎるとボール球に手を出しやすくなる傾向がある。",
+            formula: "スイング ÷ 全投球",
+            criteria: "47%: 平均"
+        },
+        {
+            id: "contact_pct", category: "bat", title: "Contact%", full: "Contact Percentage",
+            short: "コンタクト率",
+            desc: "スイングした際にバットにボールが当たった（空振りしなかった）割合。",
+            formula: "(スイング - 空振り) ÷ スイング",
+            criteria: "76%: 平均"
+        },
+        {
+            id: "z_contact_pct", category: "bat", title: "Z-Contact%", full: "Zone Contact Percentage",
+            short: "ゾーン内コンタクト率",
+            desc: "ストライクゾーン内の球をスイングした際のコンタクト率。この数値が高い打者は三振しにくい。",
+            formula: "Statcast計測",
+            criteria: "85%: 平均"
+        },
+        {
+            id: "tav", category: "bat", title: "TAv", full: "True Average",
+            short: "打撃の総合貢献度（打率スケール）",
+            desc: "Baseball Prospectusが算出する総合指標。打率のような感覚で見ることができるが、出塁や長打の価値も適切に含まれている。",
+            criteria: ".260: 平均"
+        },
+    
+        /* --- Pitching (Advanced / Statcast) --- */
+        {
+            id: "era_minus", category: "pit", title: "ERA-", full: "ERA Minus",
+            short: "パークファクター補正済み防御率（傑出度）",
+            desc: "リーグ平均を100として防御率を指数化したもの。100より低いほど優秀（例：90なら平均より10%優れている）。球場の有利不利も補正される。",
+            formula: "100 × (ERA ÷ (LgERA × PF))",
+            criteria: "100: 平均 / 80: エース級",
+            related: ["era", "fip_minus"],
+            inputs: [
+                {id:'er', label:'自責点'}, {id:'ip', label:'投球回'},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                ...ADVANCED_LEAGUE_INPUTS
+            ],
+            calc: (d) => {
+                const era = d.ip > 0 ? (d.er * 9 / d.ip) : 0;
+                const C = calcDerived(d);
+                const pf = PARK_FACTORS[d.stadium].pf;
+                const lg_era = C.lg_era_est; // 推定リーグ防御率
+                
+                // ERA- = 100 * (ERA / (LgERA * PF)) ※PFはリーグ平均に対するその球場の倍率
+                // 簡易式として、球場補正をかけた平均防御率と比較する
+                const adj_lg_era = lg_era * pf;
+                return adj_lg_era > 0 ? (100 * (era / adj_lg_era)).toFixed(0) : "---";
+            }
+        },
+        {
+            id: "fip_minus", category: "pit", title: "FIP-", full: "FIP Minus",
+            short: "パークファクター補正済みFIP（傑出度）",
+            desc: "ERA-と同様に、FIPをリーグ平均と比較して指数化したもの。100より低いほど優秀。守備の影響を排除した真の投手力を比較するのに最適。",
+            formula: "100 × (FIP ÷ (LgFIP × PF))",
+            criteria: "100: 平均 / 80: エース級",
+            related: ["fip", "era_minus"],
+            inputs: [
+                {id:'hr', label:'被本塁打'}, {id:'bb', label:'与四球'}, {id:'hbp', label:'与死球'}, {id:'so', label:'奪三振'}, {id:'ip', label:'投球回'},
+                {id:'stadium', label:'本拠地', type:'select', options: Object.keys(PARK_FACTORS).reduce((acc, key) => ({...acc, [key]: PARK_FACTORS[key].name}), {})},
+                ...ADVANCED_LEAGUE_INPUTS
+            ],
+            calc: (d) => {
+                const fip = d.ip > 0 ? ((13*d.hr + 3*(d.bb+d.hbp) - 2*d.so)/d.ip + 3.10) : 0;
+                const C = calcDerived(d);
+                // リーグFIPはリーグ防御率に近いと仮定（定数3.10を使っているため）
+                // 正確にはリーグごとのFIP定数が必要だが、ここではLgERAを代用基準とする
+                const pf = PARK_FACTORS[d.stadium].pf;
+                const adj_lg_fip = C.lg_era_est * pf; 
+                return adj_lg_fip > 0 ? (100 * (fip / adj_lg_fip)).toFixed(0) : "---";
+            }
+        },
+        {
+            id: "era_plus", category: "pit", title: "ERA+", full: "Adjusted ERA+",
+            short: "ERA-の逆数版（大きいほど優秀）",
+            desc: "リーグ平均防御率を自身の防御率で割ったもの。100が平均で、数値が大きいほど優れている（例：120なら平均より20%良い）。",
+            formula: "100 × (LgERA × PF ÷ ERA)",
+            criteria: "100: 平均 / 130: 優秀",
+            related: ["era_minus"]
+        },
+        {
+            id: "vaa", category: "pit", title: "VAA", full: "Vertical Approach Angle",
+            short: "縦の進入角度",
+            desc: "ホームベース通過時のボールの縦の角度。高めのストレートはVAAが浅い（地面と平行に近い）ほどホップして見え、空振りが取れやすい。",
+            formula: "トラッキングデータ",
+            criteria: "-4度台: ホップ型 / -6度台: 沈む球"
+        },
+        {
+            id: "ivb", category: "pit", title: "IVB", full: "Induced Vertical Break",
+            short: "伸び（ホップ成分）",
+            desc: "重力の影響を除いた縦の変化量。ボールがどれだけ「落ちなかったか」を示す。数値が大きいほど打者の手元で伸びるストレートとなる。",
+            formula: "トラッキングデータ",
+            criteria: "18インチ以上: ノビがある"
+        },
+        {
+            id: "spin_rate", category: "pit", title: "SpinRate", full: "Spin Rate",
+            short: "回転数",
+            desc: "ボールが1分間に回転する回数(rpm)。回転数が多いストレートは落ちにくく、カーブは大きく曲がる傾向がある。",
+            formula: "回転数/分",
+            criteria: "2200rpm: 直球平均"
+        },
+        {
+            id: "bauer_units", category: "pit", title: "Bauer Units", full: "Bauer Units",
+            short: "球速に対する回転数の比率",
+            desc: "回転数を球速(mph)で割ったもの。球速に関わらず「回転の質」が高いかどうかを判断する目安となる。",
+            formula: "回転数 ÷ 球速(mph)",
+            criteria: "24.0: 平均",
+            inputs: [{id:'spin', label:'回転数(rpm)'}, {id:'velo', label:'球速(mph)'}],
+            calc: (d) => d.velo > 0 ? (d.spin / d.velo).toFixed(1) : "---"
+        },
+        {
+            id: "extension", category: "pit", title: "Extension", full: "Extension",
+            short: "リリースポイントの前のめり度",
+            desc: "プレートからリリース位置までの距離。エクステンションが長いほど打者までの距離が縮まり、体感速度が上がる。",
+            formula: "フィート(ft)",
+            criteria: "6.3ft: 平均"
+        },
+        {
+            id: "active_spin", category: "pit", title: "Active Spin", full: "Active Spin (Spin Efficiency)",
+            short: "有効回転率",
+            desc: "ボールの変化に寄与している回転の割合。100%に近いほど綺麗な縦回転（または横回転）で、変化の効率が良い。",
+            formula: "有効回転 ÷ 総回転",
+            criteria: "直球は高いほど良い"
+        },
+        {
+            id: "meatball_pct", category: "pit", title: "Meatball%", full: "Meatball Percentage",
+            short: "ど真ん中失投率",
+            desc: "ストライクゾーンの真ん中付近（甘いコース）に投じられた球の割合。低いほどコマンド（制球）が良い。",
+            formula: "Statcast計測",
+            criteria: "7%: 平均"
+        },
+        {
+            id: "putaway_pct", category: "pit", title: "PutAway%", full: "Put Away Percentage",
+            short: "決め球での三振奪取率",
+            desc: "2ストライクと追い込んだ状況で、その球種を投じた際に三振を奪えた割合。ウイニングショットの威力。",
+            formula: "三振 ÷ 2ストライク後の投球数",
+            criteria: "20%: 優秀"
+        },
+        {
+            id: "edge_pct", category: "pit", title: "Edge%", full: "Edge Percentage",
+            short: "エッジ（ゾーン境界）投球率",
+            desc: "ストライクゾーンの境界線付近（幅ボール1個分）への投球割合。コマンド能力の高さを示す。",
+            formula: "Statcast計測",
+            criteria: "42%: 平均"
+        },
+        {
+            id: "f_strike_pct", category: "pit", title: "F-Strike%", full: "First Pitch Strike Percentage",
+            short: "初球ストライク率",
+            desc: "初球でストライク（ファウル・インプレー含む）を取った割合。カウント有利に進める能力。",
+            formula: "初球ストライク ÷ 全対戦数",
+            criteria: "60%: 平均 / 65%以上: 優秀"
+        },
+        {
+            id: "hr_fb_pit", category: "pit", title: "HR/FB (Pit)", full: "HR per Fly Ball (Pitcher)",
+            short: "被フライあたりの被本塁打率",
+            desc: "打たれたフライが本塁打になった割合。リーグ平均より極端に高い場合は「運が悪い」可能性があり、xFIPでの補正対象となる。",
+            formula: "被本塁打 ÷ 被フライ数",
+            criteria: "10-12%: 平均",
+            inputs: [{id:'hr', label:'被本塁打'}, {id:'fb', label:'被フライ数'}],
+            calc: (d) => d.fb > 0 ? ((d.hr/d.fb)*100).toFixed(1)+'%' : '---'
+        },
+        {
+            id: "pace", category: "pit", title: "Pace", full: "Pace",
+            short: "投球間隔（秒）",
+            desc: "投手が前の投球から次の投球動作に入るまでの平均秒数。近年はピッチクロック導入により短縮傾向。",
+            formula: "秒数",
+            criteria: "速いほうが守備のリズムが良いとされる"
+        },
+    
+        /* --- Fielding / Running / Other --- */
+        {
+            id: "oaa", category: "fld", title: "OAA", full: "Outs Above Average",
+            short: "平均より多く取ったアウトの数",
+            desc: "Statcastによる守備指標。打球の滞空時間や野手の移動距離から「アウト確率」を算出し、実際にアウトにしたかどうかで貢献度を積算する。",
+            formula: "Statcast計測",
+            criteria: "0: 平均 / +10: 名手"
+        },
+        {
+            id: "frm", category: "fld", title: "FRM", full: "Catcher Framing",
+            short: "フレーミング貢献度",
+            desc: "捕手が際どいコースをストライクと判定させる技術（フレーミング）による得点貢献。",
+            formula: "CSAA等を換算",
+            criteria: "0: 平均"
+        },
+        {
+            id: "pop_time", category: "fld", title: "Pop Time", full: "Pop Time",
+            short: "ポップタイム（二塁送球時間）",
+            desc: "捕手が捕球してから二塁ベース上の野手が捕球するまでの時間。盗塁阻止能力に直結する。",
+            formula: "秒数",
+            criteria: "2.0秒: 平均 / 1.8秒: 強肩"
+        },
+        {
+            id: "exchange_time", category: "fld", title: "Exchange", full: "Exchange Time",
+            short: "握り替え時間",
+            desc: "捕手がボールを捕ってから手から離すまでの時間。ポップタイム短縮には肩の強さより重要とも言われる。",
+            formula: "秒数",
+            criteria: "0.7秒: 平均"
+        },
+        {
+            id: "raa_fld", category: "fld", title: "RAA (Fld)", full: "Runs Above Average (Fielding)",
+            short: "守備による平均比得点貢献",
+            desc: "OAAを得点価値に換算した指標。UZRやDRSと同様にWARの守備要素として使われることが多い。",
+            criteria: "0: 平均"
+        },
+        {
+            id: "spd", category: "fld", title: "Spd", full: "Speed Score",
+            short: "スピードスコア",
+            desc: "盗塁成功率、三塁打、得点率、併殺打の少なさなどから算出される、選手の「足の速さ」を0〜10で評価した指標。ビル・ジェームズ考案。",
+            formula: "0〜10のスコア",
+            criteria: "4.5: 平均 / 7.0: 俊足"
+        },
+        {
+            id: "sprint_speed", category: "fld", title: "Sprint Speed", full: "Sprint Speed",
+            short: "スプリントスピード",
+            desc: "全力疾走時のトップスピード（フィート/秒）。走力の最も純粋な指標。",
+            formula: "ft/sec",
+            criteria: "27ft/s: 平均 / 30ft/s: エリート"
+        },
+        {
+            id: "hp_to_1b", category: "fld", title: "HP to 1B", full: "Home to First Base Time",
+            short: "一塁到達タイム",
+            desc: "打撃インパクトから一塁ベースに到達するまでの時間。左打者の方が有利になる傾向がある。",
+            formula: "秒数",
+            criteria: "4.3秒: 平均(右) / 4.2秒: 平均(左)"
+        },
+        {
+            id: "baseruns", category: "tot", title: "BaseRuns", full: "BaseRuns",
+            short: "チーム得点力の推計式",
+            desc: "チームの安打、四球、本塁打などの要素から「理論上の総得点」を算出する。実際の得点との乖離を見ることで、運や勝負強さを分析できる。",
+            formula: "BSR = A*B / (A+B) ...",
+            criteria: "実際の得点と比較"
+        },
+        {
+            id: "vorp", category: "tot", title: "VORP", full: "Value Over Replacement Player",
+            short: "代替選手対比価値",
+            desc: "WARの概念の先駆けとなった指標。ポジション補正を含まない攻撃の貢献度を得点数で表す。",
+            criteria: "積み上げ指標"
+        },
+        {
+            id: "log5", category: "tot", title: "Log5", full: "Log5 Method",
+            short: "対戦勝率予測式",
+            desc: "チームAとチームBの勝率から、直接対決した際の勝率を予測する計算式。",
+            formula: "(A - A×B) ÷ (A + B - 2×A×B)",
+            inputs: [{id:'wa', label:'A勝率(0.xxx)'}, {id:'wb', label:'B勝率(0.xxx)'}],
+            calc: (d) => {
+                const num = d.wa - (d.wa * d.wb);
+                const den = d.wa + d.wb - (2 * d.wa * d.wb);
+                return den !== 0 ? (num / den).toFixed(3) : "---";
+            }
+        },
+        {
+            id: "pli", category: "tot", title: "pLI", full: "Player Leverage Index",
+            short: "平均重要局面指数",
+            desc: "その選手が打席（またはマウンド）に立った場面の平均的な重要度。1.0より高い場合、勝敗を分ける重要な場面での起用が多かったことを示す。",
+            criteria: "1.0: 平均"
         }
     ];
     // --- End Terms Database ---
