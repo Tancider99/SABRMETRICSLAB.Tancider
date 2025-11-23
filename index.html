@@ -4019,23 +4019,25 @@
     /* --- Settings & Variables --- */
     :root {
         --g-node-size: 85px;
-        --g-focus-size: 300px;
+        --g-focus-size: 320px; /* フォーカスサイズ */
         --g-font-size: 0.85rem;
     }
     @media (max-width: 768px) {
         :root {
             --g-node-size: 65px;
-            --g-focus-size: 260px;
-            --g-font-size: 0.7rem;
+            --g-focus-size: 280px;
+            --g-font-size: 0.75rem;
         }
-        /* モバイル用軽量化スタイル */
+        /* モバイル軽量化: 影とブラーを削除 */
         .g-node {
             box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+            background: rgba(30, 41, 59, 0.98) !important;
             border: 1px solid rgba(255,255,255,0.3) !important;
-            background: rgba(30, 41, 59, 0.95) !important;
         }
         .g-node.is-focused {
-            box-shadow: 0 0 30px rgba(0,0,0,0.5) !important;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5) !important;
         }
     }
 
@@ -4046,22 +4048,20 @@
         z-index: 9999;
         visibility: hidden; opacity: 0;
         transform: scale(1.1);
-        transition: opacity 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), visibility 0.5s;
+        transition: opacity 0.5s, transform 0.5s, visibility 0.5s;
         overflow: hidden;
         cursor: grab;
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
-        perspective: 1000px;
-        /* 画質向上のためのアンチエイリアス設定 */
+        /* フォントレンダリング最適化 */
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
     }
-    
     #galaxy-overlay.active { visibility: visible; opacity: 1; transform: scale(1); }
     #galaxy-overlay:active { cursor: grabbing; }
 
-    /* Canvas Starfield (High Performance) */
+    /* Canvas Starfield (Max Performance) */
     #starfield-canvas {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
         pointer-events: none; z-index: 0;
@@ -4071,13 +4071,11 @@
     #galaxy-universe {
         position: absolute; top: 50%; left: 50%; width: 0; height: 0;
         transform-style: preserve-3d;
-        /* will-change はJSで動的に制御して画質を保つ */
-        backface-visibility: hidden;
+        /* 通常時は will-change を外して高画質維持 */
     }
     /* 操作中のみGPU合成を強制して滑らかにする */
     #galaxy-universe.is-interacting {
         will-change: transform;
-        /* 操作中は画質より速度優先 */
     }
 
     /* --- Cosmos Container --- */
@@ -4098,13 +4096,20 @@
     /* --- Nodes --- */
     .g-node {
         position: absolute;
+        /* サイズ変更アニメーションを有効化 */
         width: var(--g-node-size); height: var(--g-node-size);
         transform: translate(-50%, -50%) scale(0);
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        /* トランジション調整 */
-        transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s, filter 0.3s;
+        
+        /* width/heightの遷移を追加してクッキリ拡大を実現 */
+        transition: 
+            width 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+            height 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+            transform 0.4s cubic-bezier(0.19, 1, 0.22, 1),
+            opacity 0.3s, filter 0.3s;
+            
         box-shadow: 0 0 15px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
         z-index: 10;
@@ -4115,6 +4120,7 @@
         touch-action: none;
         animation: nodePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         animation-play-state: paused;
+        
         /* テキストの滲みを防止 */
         transform-style: flat; 
     }
@@ -4128,6 +4134,7 @@
             z-index: 50;
             border-color: white; color: white;
             box-shadow: 0 0 25px rgba(255,255,255,0.25);
+            /* ホバー時はScaleで拡大（一時的なのでOK） */
             transform: translate(-50%, -50%) scale(1.15);
         }
     }
@@ -4146,16 +4153,16 @@
     }
     @media (min-width: 769px) { .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.2); } }
 
-    /* Focused State */
+    /* Focused State - High Resolution Mode */
     .g-node.is-focused {
+        /* ScaleではなくWidth/Heightで拡大することで再描画を促し高画質化 */
         width: var(--g-focus-size); height: var(--g-focus-size);
         z-index: 100;
         background: rgba(15, 23, 42, 0.98) !important;
         border: 2px solid rgba(255,255,255,0.6) !important;
-        transform: translate(-50%, -50%) scale(1) !important;
+        transform: translate(-50%, -50%) scale(1) !important; /* Scaleは1に戻す */
         cursor: default;
-        /* フォーカス時は影をしっかりつける */
-        box-shadow: 0 0 50px rgba(0,0,0,0.6) !important;
+        box-shadow: 0 0 60px rgba(0,0,0,0.6) !important;
     }
     
     .g-content-normal { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; transition: opacity 0.2s; }
@@ -4164,32 +4171,38 @@
     .g-content-focus {
         display: none; opacity: 0; width: 100%; height: 100%;
         flex-direction: column; align-items: center; justify-content: center;
-        padding: 20px; box-sizing: border-box;
+        padding: 25px; box-sizing: border-box;
     }
-    .g-node.is-focused .g-content-focus { display: flex; opacity: 1; animation: fadeIn 0.3s ease forwards; }
+    .g-node.is-focused .g-content-focus { display: flex; opacity: 1; animation: fadeIn 0.4s ease 0.1s forwards; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
-    .gf-icon svg { width: 40px; height: 40px; margin-bottom: 8px; opacity: 1; }
-    .gf-title { font-size: 1.6rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; color: white; }
-    .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
-    .gf-desc { font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+    /* Focus Content - Optimized Sizes */
+    .gf-icon svg { width: 48px; height: 48px; margin-bottom: 10px; opacity: 1; }
+    .gf-title { font-size: 1.8rem; font-weight: 900; line-height: 1.1; margin-bottom: 5px; color: white; text-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+    .gf-full { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.8; margin-bottom: 12px; color: #cbd5e1; }
+    .gf-desc { font-size: 0.85rem; line-height: 1.5; color: #e2e8f0; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
     .gf-btn { 
-        padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
+        padding: 10px 24px; border-radius: 30px; border: 1px solid rgba(255,255,255,0.4); 
         background: rgba(255,255,255,0.15); color: white; cursor: pointer; 
-        font-size: 0.8rem; font-weight: bold; pointer-events: auto; z-index: 200; position: relative;
+        font-size: 0.9rem; font-weight: bold; pointer-events: auto; z-index: 200; position: relative;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     .gf-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
-    @media (max-width: 768px) { .gf-title { font-size: 1.4rem; } .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 4; } }
+    
+    @media (max-width: 768px) { 
+        .gf-title { font-size: 1.5rem; } 
+        .gf-desc { font-size: 0.8rem; -webkit-line-clamp: 4; } 
+        .gf-icon svg { width: 36px; height: 36px; }
+    }
     .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; }
     
     /* Lines */
     #galaxy-lines { position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px; pointer-events: none; z-index: 1; }
-    /* SVGレンダリングの最適化 */
-    .g-line { stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: opacity 0.3s; opacity: 0; shape-rendering: geometricPrecision; }
+    .g-line { stroke: rgba(255,255,255,0.15); stroke-width: 1.5; transition: opacity 0.3s; opacity: 0; shape-rendering: geometricPrecision; }
     .active .g-line { animation: lineFadeIn 1s 0.5s forwards; }
     @keyframes lineFadeIn { to { opacity: 1; } }
     .g-line.is-dimmed { opacity: 0.02 !important; }
-    .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1 !important; }
+    .g-line.is-related { stroke: rgba(255,255,255,0.6); stroke-width: 2.0; opacity: 1 !important; }
 
     /* Category Colors */
     .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); } .g-cat-bat.is-focused { border-color: #0ea5e9; } .g-cat-bat .icon-normal { color: #0ea5e9; }
@@ -4215,7 +4228,6 @@
 
 <div id="galaxy-overlay">
     <canvas id="starfield-canvas"></canvas>
-    
     <div id="galaxy-universe">
         <div id="galaxy-cosmos">
             <svg id="galaxy-lines"></svg>
@@ -4243,8 +4255,7 @@
         scale: 0.35, panX: 0, panY: 0, 
         isDragging: false, lastX: 0, lastY: 0, 
         isPinching: false, pinchStartDist: 0, pinchStartScale: 1,
-        suppressClick: false,
-        isInteracting: false // 操作中フラグ（画質制御用）
+        suppressClick: false
     };
     const MAX_SCALE = 1.2; const MIN_SCALE = 0.35;
 
@@ -4304,7 +4315,7 @@
 
         renderLines();
         nodesData.forEach(node => createNodeElement(node));
-        drawStars(); // Canvas描画
+        drawStars();
         isInitialized = true;
     }
 
@@ -4364,7 +4375,7 @@
         resetFocus();
         const currentId = node.id;
         const relatedIds = node.links || [];
-        // High Contrast: 1次関連のみ強調
+        
         document.querySelectorAll('.g-node').forEach(el => {
             const elId = el.id.replace('g-node-', '');
             if(elId === currentId) el.classList.add('is-focused');
@@ -4378,6 +4389,7 @@
             else line.classList.add('is-dimmed');
         });
 
+        // 拡大表示時はズームを最大にして視認性を高める
         animateView(-node.x, -node.y, MAX_SCALE);
     }
 
@@ -4393,16 +4405,13 @@
     });
 
     function animateView(targetX, targetY, targetScale) {
-        // アニメーション中はクラス付与してwill-change有効化
-        gUniverse.classList.add('is-interacting');
+        gUniverse.classList.add('is-interacting'); // アニメーション中のみ軽量化
         gUniverse.style.transition = 'transform 0.6s cubic-bezier(0.19, 1, 0.22, 1)';
         viewState.panX = targetX; viewState.panY = targetY; viewState.scale = targetScale;
         updateTransform();
-        
-        // アニメーション終了後に画質優先モードへ
         setTimeout(() => { 
             gUniverse.style.transition = 'none'; 
-            gUniverse.classList.remove('is-interacting');
+            gUniverse.classList.remove('is-interacting'); // アニメ終了後に高画質化
         }, 600);
     }
 
@@ -4431,39 +4440,23 @@
     function zoomIn() { viewState.scale = Math.min(viewState.scale * 1.3, MAX_SCALE); animateView(viewState.panX, viewState.panY, viewState.scale); }
     function zoomOut() { viewState.scale = Math.max(viewState.scale / 1.3, MIN_SCALE); animateView(viewState.panX, viewState.panY, viewState.scale); }
 
-    /* Interaction & Dynamic Rendering Logic */
-    // 操作開始：パフォーマンス優先モード
-    const startInteraction = () => {
-        gUniverse.style.transition = 'none';
-        gUniverse.classList.add('is-interacting');
-    };
-    // 操作終了：高画質モード（少し遅延させて確実に戻す）
-    const endInteraction = () => {
-        setTimeout(() => {
-            gUniverse.classList.remove('is-interacting');
-        }, 100);
-    };
+    /* Performance Control & Interaction */
+    const startInteraction = () => { gUniverse.style.transition = 'none'; gUniverse.classList.add('is-interacting'); };
+    const endInteraction = () => { setTimeout(() => { gUniverse.classList.remove('is-interacting'); }, 100); };
 
     function getDistance(touches) {
         const dx = touches[0].clientX - touches[1].clientX, dy = touches[0].clientY - touches[1].clientY;
         return Math.sqrt(dx*dx + dy*dy);
     }
     gOverlay.addEventListener('wheel', (e) => { 
-        e.preventDefault(); 
-        startInteraction();
+        e.preventDefault(); startInteraction();
         const delta = e.deltaY * -0.001; 
         viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.scale+delta), MAX_SCALE); 
         updateTransform();
-        // ホイール操作終了判定（簡易）
-        clearTimeout(window.wheelTimer);
-        window.wheelTimer = setTimeout(endInteraction, 150);
+        clearTimeout(window.wheelTimer); window.wheelTimer = setTimeout(endInteraction, 150);
     }, {passive:false});
 
-    const handleStart = (x, y) => { 
-        if(viewState.isPinching)return; 
-        viewState.isDragging = false; viewState.lastX = x; viewState.lastY = y; 
-        startInteraction();
-    };
+    const handleStart = (x, y) => { if(viewState.isPinching)return; viewState.isDragging = false; viewState.lastX = x; viewState.lastY = y; startInteraction(); };
     const handleMove = (x, y) => {
         if(viewState.isPinching)return;
         const dx = x - viewState.lastX, dy = y - viewState.lastY;
@@ -4478,12 +4471,9 @@
 
     gOverlay.addEventListener('touchstart', (e) => {
         if(e.target.closest('.galaxy-controls'))return;
-        if(e.touches.length===2){ 
-            viewState.isPinching=true; viewState.pinchStartDist=getDistance(e.touches); viewState.pinchStartScale=viewState.scale;
-            startInteraction();
-        } else if(e.touches.length===1){ viewState.isPinching=false; handleStart(e.touches[0].clientX, e.touches[0].clientY); }
+        if(e.touches.length===2){ viewState.isPinching=true; viewState.pinchStartDist=getDistance(e.touches); viewState.pinchStartScale=viewState.scale; startInteraction(); }
+        else if(e.touches.length===1){ viewState.isPinching=false; handleStart(e.touches[0].clientX, e.touches[0].clientY); }
     }, {passive:false});
-    
     window.addEventListener('touchmove', (e) => {
         if(e.touches.length===2 && viewState.isPinching){
             const dist = getDistance(e.touches); const scaleChange = dist/viewState.pinchStartDist;
@@ -4491,38 +4481,21 @@
             updateTransform(); e.preventDefault();
         } else if(e.touches.length===1 && !viewState.isPinching) handleMove(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive:false});
-    
     window.addEventListener('touchend', (e) => {
-        if(e.touches.length<2) {
-            if(viewState.isPinching) { viewState.suppressClick = true; setTimeout(() => { viewState.suppressClick = false; }, 300); }
-            viewState.isPinching=false;
-        }
-        endInteraction();
-        setTimeout(()=>viewState.isDragging=false, 50);
+        if(e.touches.length<2) { if(viewState.isPinching) { viewState.suppressClick = true; setTimeout(() => { viewState.suppressClick = false; }, 300); } viewState.isPinching=false; }
+        endInteraction(); setTimeout(()=>viewState.isDragging=false, 50);
     });
 
-    /* Canvas Stars */
     function drawStars() {
-        const cvs = document.getElementById('starfield-canvas');
-        const ctx = cvs.getContext('2d');
-        // Canvasサイズ調整
+        const cvs = document.getElementById('starfield-canvas'), ctx = cvs.getContext('2d');
         const setSize = () => { cvs.width = window.innerWidth; cvs.height = window.innerHeight; render(); };
         window.addEventListener('resize', setSize);
-        
-        const stars = [];
-        const numStars = window.innerWidth < 768 ? 60 : 150;
-        for(let i=0; i<numStars; i++) {
-            stars.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, r: Math.random()*1.5, a: Math.random() });
-        }
+        const stars = []; const numStars = window.innerWidth < 768 ? 60 : 150;
+        for(let i=0; i<numStars; i++) stars.push({ x: Math.random()*window.innerWidth, y: Math.random()*window.innerHeight, r: Math.random()*1.5, a: Math.random() });
         setSize();
-
         function render() {
-            ctx.clearRect(0,0,cvs.width,cvs.height);
-            ctx.fillStyle = "white";
-            stars.forEach(s => {
-                ctx.globalAlpha = s.a;
-                ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill();
-            });
+            ctx.clearRect(0,0,cvs.width,cvs.height); ctx.fillStyle = "white";
+            stars.forEach(s => { ctx.globalAlpha = s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
         }
     }
 </script>
