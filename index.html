@@ -4016,19 +4016,21 @@
 </script>
 
 <style>
-    /* --- Responsive Variables --- */
+    /* --- Settings & Variables --- */
     :root {
-        --g-center-size: 320px;
-        --g-sat-size: 110px;
+        --g-node-size: 80px;         /* 通常時のノードサイズ */
+        --g-focus-size: 300px;       /* フォーカス時のサイズ */
+        --g-font-size: 0.8rem;
     }
     @media (max-width: 768px) {
         :root {
-            --g-center-size: 220px;
-            --g-sat-size: 75px;
+            --g-node-size: 60px;
+            --g-focus-size: 220px;
+            --g-font-size: 0.65rem;
         }
     }
 
-    /* --- Overlay & Space Environment --- */
+    /* --- Space Environment --- */
     #galaxy-overlay {
         position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
@@ -4036,171 +4038,146 @@
         display: none; opacity: 0;
         transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
         overflow: hidden;
-        perspective: 1500px;
-        /* Pan & Zoom Cursor */
         cursor: grab;
-        touch-action: none; /* Prevent default touch scrolling */
+        touch-action: none;
     }
     #galaxy-overlay.active { display: flex; opacity: 1; }
     #galaxy-overlay:active { cursor: grabbing; }
-    
-    /* Warp Speed Effect */
-    #galaxy-overlay.warping .star {
-        animation-duration: 0.4s !important; opacity: 0.5; width: 2px; height: 30px;
-    }
 
-    /* Animated Stars */
+    /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0; box-shadow: 0 0 4px rgba(255,255,255,0.8);
-        animation: space-flight var(--duration) linear infinite;
-        pointer-events: none;
-    }
-    @keyframes space-flight {
-        0% { transform: translate3d(0, 0, -1000px) scale(0); opacity: 0; }
-        20% { opacity: 0.8; }
-        100% { transform: translate3d(var(--destX), var(--destY), 1000px) scale(1.5); opacity: 0; }
+        opacity: 0.6; pointer-events: none;
+        transition: transform 0.1s; /* Parallax placeholder */
     }
 
-    /* --- Universe Wrapper (For Pan/Zoom) --- */
+    /* --- Universe Wrapper (The Coordinate System) --- */
     #galaxy-universe {
         position: absolute;
-        top: 0; left: 0; width: 100%; height: 100%;
-        transform-origin: 50% 42%; /* Zoom center matches visual center */
+        top: 50%; left: 50%; /* Start from center of screen */
+        width: 0; height: 0;
+        transform-style: preserve-3d;
         will-change: transform;
     }
 
-    /* --- Node Container --- */
-    #galaxy-container {
-        position: absolute; 
-        top: 42%; /* Visual Center */
-        left: 50%;
-        width: 0; height: 0;
-        transform-style: preserve-3d;
-        transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
-    }
-
-    /* --- Nodes Common --- */
+    /* --- Nodes --- */
     .g-node {
         position: absolute;
-        transform: translate(-50%, -50%);
+        width: var(--g-node-size); height: var(--g-node-size);
+        transform: translate(-50%, -50%); /* Center the div on its coordinate */
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1);
-        backdrop-filter: blur(12px);
-        box-shadow: 0 0 15px rgba(0,0,0,0.5), inset 0 0 20px rgba(255,255,255,0.05);
-        border: 1px solid rgba(255,255,255,0.15);
+        transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); /* Smooth morphing */
+        backdrop-filter: blur(4px);
+        box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,255,255,0.2);
         user-select: none;
+        z-index: 10;
+        background: rgba(30, 41, 59, 0.6);
+        color: #94a3b8;
+        font-weight: 700;
+        font-size: var(--g-font-size);
     }
+
+    .g-node:hover {
+        z-index: 50;
+        border-color: white;
+        color: white;
+        box-shadow: 0 0 20px rgba(255,255,255,0.3);
+        transform: translate(-50%, -50%) scale(1.2);
+    }
+
+    /* Content Switching */
+    .g-content-normal { display: flex; flex-direction: column; align-items: center; opacity: 1; transition: 0.3s; }
+    .g-content-focus { display: none; opacity: 0; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
     
-    /* --- Center Node --- */
-    .g-node.center {
-        width: var(--g-center-size); height: var(--g-center-size);
-        background: rgba(15, 23, 42, 0.6);
+    .g-node .icon-normal svg { width: 24px; height: 24px; margin-bottom: 4px; opacity: 0.8; }
+
+    /* --- Focused State (Large Center) --- */
+    .g-node.is-focused {
+        width: var(--g-focus-size); height: var(--g-focus-size);
         z-index: 100;
-        border: 2px solid rgba(255,255,255,0.3);
-        box-shadow: 0 0 60px rgba(14, 165, 233, 0.15), inset 0 0 40px rgba(0,0,0,0.5);
-        padding: 20px;
-        box-sizing: border-box;
+        background: rgba(15, 23, 42, 0.85);
+        border: 2px solid rgba(255,255,255,0.4);
+        box-shadow: 0 0 80px rgba(14, 165, 233, 0.2), inset 0 0 40px rgba(0,0,0,0.5);
+        transform: translate(-50%, -50%) scale(1) !important; /* Override hover scale */
+        cursor: default;
     }
-    .g-center-content {
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        height: 100%; opacity: 0; animation: fadeInContent 0.8s 0.3s forwards;
-    }
-    @keyframes fadeInContent { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .g-node.is-focused .g-content-normal { display: none; opacity: 0; }
+    .g-node.is-focused .g-content-focus { display: flex; animation: fadeIn 0.5s 0.2s forwards; }
 
-    .g-icon-large svg { width: 48px; height: 48px; margin-bottom: 10px; stroke-width: 1.5; opacity: 0.9; }
-    .g-title-large { font-size: 2rem; font-weight: 900; line-height: 1; margin-bottom: 5px; letter-spacing: -0.02em; }
-    .g-full-large { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 15px; }
-    .g-desc-large { font-size: 0.9rem; line-height: 1.5; color: #cbd5e1; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Focus Content Styles */
+    .gf-icon svg { width: 48px; height: 48px; margin-bottom: 10px; opacity: 0.9; }
+    .gf-title { font-size: 1.8rem; font-weight: 900; line-height: 1; margin-bottom: 5px; color: white; }
+    .gf-full { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.7; margin-bottom: 15px; color: #cbd5e1; }
+    .gf-desc { font-size: 0.85rem; line-height: 1.5; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .gf-btn { 
+        padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
+        background: rgba(255,255,255,0.1); color: white; cursor: pointer; transition: 0.2s; font-size: 0.8rem; font-weight: bold;
+    }
+    .gf-btn:hover { background: rgba(255,255,255,0.3); }
 
     @media (max-width: 768px) {
-        .g-icon-large svg { width: 32px; height: 32px; margin-bottom: 5px; }
-        .g-title-large { font-size: 1.4rem; }
-        .g-full-large { font-size: 0.65rem; margin-bottom: 8px; }
-        .g-desc-large { font-size: 0.75rem; -webkit-line-clamp: 2; }
-    }
-    
-    .g-node.center:hover { 
-        transform: translate(-50%, -50%) scale(1.02); 
-        border-color: rgba(255,255,255,0.6);
-        box-shadow: 0 0 80px rgba(14, 165, 233, 0.3);
+        .gf-icon svg { width: 32px; height: 32px; }
+        .gf-title { font-size: 1.4rem; }
+        .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 2; }
     }
 
-    /* --- Satellite Nodes --- */
-    .g-node.satellite {
-        width: var(--g-sat-size); height: var(--g-sat-size);
-        background: rgba(30, 41, 59, 0.4);
-        font-size: 0.9rem; font-weight: 700; color: #94a3b8;
-        opacity: 0;
-        animation: popIn 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    /* --- Lines --- */
+    #galaxy-lines { 
+        position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px; /* Huge SVG canvas */
+        pointer-events: none; z-index: 1; 
+        overflow: visible;
     }
-    @media (max-width: 768px) {
-        .g-node.satellite { font-size: 0.7rem; }
-        .g-node.satellite .sat-icon svg { width: 20px; height: 20px; }
-    }
-
-    @keyframes popIn { from { transform: translate(-50%, -50%) scale(0); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
-
-    .g-node.satellite:hover {
-        background: rgba(255,255,255,0.1); color: white; border-color: white;
-        transform: translate(-50%, -50%) scale(1.15); z-index: 50;
-        box-shadow: 0 0 25px rgba(255,255,255,0.4);
-    }
-    .g-node.satellite .sat-icon svg { width: 24px; height: 24px; margin-bottom: 5px; opacity: 0.7; }
-
-    /* --- Connection Lines --- */
-    #galaxy-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
     .g-line {
-        stroke: rgba(255,255,255,0.15); stroke-width: 1.5;
-        stroke-dasharray: 1000; stroke-dashoffset: 1000;
-        animation: drawLine 1s 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+        stroke: rgba(255,255,255,0.08); stroke-width: 1.5;
+        transition: stroke 0.3s;
     }
-    @keyframes drawLine { to { stroke-dashoffset: 0; } }
+    .g-line.highlight { stroke: rgba(255,255,255,0.4); stroke-width: 2; }
 
-    /* --- Category Themes --- */
-    .g-cat-bat.center { border-color: #0ea5e9; color: #e0f2fe; text-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
-    .g-cat-pit.center { border-color: #f43f5e; color: #ffe4e6; text-shadow: 0 0 20px rgba(244, 63, 94, 0.5); }
-    .g-cat-fld.center { border-color: #d97706; color: #fef3c7; text-shadow: 0 0 20px rgba(217, 119, 6, 0.5); }
-    .g-cat-tot.center { border-color: #10b981; color: #d1fae5; text-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+    /* --- Category Colors --- */
+    .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); }
+    .g-cat-bat.is-focused { border-color: #0ea5e9; text-shadow: 0 0 20px rgba(14, 165, 233, 0.5); }
+    .g-cat-bat .icon-normal { color: #0ea5e9; }
 
-    .g-cat-bat.satellite:hover { border-color: #0ea5e9; color: #0ea5e9; }
-    .g-cat-pit.satellite:hover { border-color: #f43f5e; color: #f43f5e; }
-    .g-cat-fld.satellite:hover { border-color: #d97706; color: #d97706; }
-    .g-cat-tot.satellite:hover { border-color: #10b981; color: #10b981; }
+    .g-cat-pit { border-color: rgba(244, 63, 94, 0.4); }
+    .g-cat-pit.is-focused { border-color: #f43f5e; text-shadow: 0 0 20px rgba(244, 63, 94, 0.5); }
+    .g-cat-pit .icon-normal { color: #f43f5e; }
+
+    .g-cat-fld { border-color: rgba(217, 119, 6, 0.4); }
+    .g-cat-fld.is-focused { border-color: #d97706; text-shadow: 0 0 20px rgba(217, 119, 6, 0.5); }
+    .g-cat-fld .icon-normal { color: #d97706; }
+
+    .g-cat-tot { border-color: rgba(16, 185, 129, 0.4); }
+    .g-cat-tot.is-focused { border-color: #10b981; text-shadow: 0 0 20px rgba(16, 185, 129, 0.5); }
+    .g-cat-tot .icon-normal { color: #10b981; }
 
     /* --- Controls UI --- */
     .galaxy-controls {
         position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
         display: flex; gap: 15px; z-index: 1000;
         padding: 10px 20px; border-radius: 40px;
-        background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
+        background: rgba(0,0,0,0.5); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
     }
-    @media (max-width: 768px) {
-        .galaxy-controls { bottom: 80px; gap: 10px; padding: 8px 15px; }
-    }
-
     .g-btn {
         background: transparent; border: none; color: rgba(255,255,255,0.7);
         padding: 0; border-radius: 50%; cursor: pointer;
         transition: 0.3s; display: flex; align-items: center; justify-content: center;
         width: 44px; height: 44px; position: relative;
     }
-    .g-btn:hover { background: rgba(255,255,255,0.15); color: white; transform: translateY(-3px); }
+    .g-btn:hover { background: rgba(255,255,255,0.2); color: white; transform: translateY(-3px); }
     .g-btn svg { width: 22px; height: 22px; stroke-width: 2; }
     
-    /* Tooltip */
     .g-btn::after {
         content: attr(data-tip); position: absolute; top: -35px; left: 50%; transform: translateX(-50%);
         background: rgba(0,0,0,0.8); color: white; font-size: 0.75rem; padding: 4px 8px; border-radius: 4px;
         opacity: 0; pointer-events: none; transition: 0.2s; white-space: nowrap;
     }
     .g-btn:hover::after { opacity: 1; top: -45px; }
-    
     .g-btn.close { color: #f43f5e; }
-    .g-btn.close:hover { background: rgba(244, 63, 94, 0.2); }
-
 </style>
 
 <div id="galaxy-overlay">
@@ -4208,7 +4185,7 @@
     
     <div id="galaxy-universe">
         <svg id="galaxy-lines"></svg>
-        <div id="galaxy-container"></div>
+        <div id="galaxy-nodes"></div>
     </div>
 
     <div class="galaxy-controls">
@@ -4218,12 +4195,8 @@
         <button class="g-btn" onclick="zoomOut()" data-tip="縮小 (-)">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="8" x2="16" y1="12" y2="12"/></svg>
         </button>
-        <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:auto 5px;"></div>
-        <button class="g-btn" onclick="resetGalaxy()" data-tip="ホーム (リセット)">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
-        </button>
-        <button class="g-btn" onclick="randomJump()" data-tip="ランダムジャンプ">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><path d="M16 8h.01"/><path d="M8 8h.01"/><path d="M8 16h.01"/><path d="M16 16h.01"/><path d="M12 12h.01"/></svg>
+        <button class="g-btn" onclick="fitToScreen()" data-tip="全体表示">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
         </button>
         <div style="width:1px; height:24px; background:rgba(255,255,255,0.2); margin:auto 5px;"></div>
         <button class="g-btn close" onclick="closeMindMap()" data-tip="閉じる">
@@ -4233,23 +4206,25 @@
 </div>
 
 <script>
-    // --- Galaxy Logic with Pan & Zoom ---
+    // --- SABR GALAXY v4 Core Logic ---
     const gOverlay = document.getElementById('galaxy-overlay');
     const gUniverse = document.getElementById('galaxy-universe');
-    const gContainer = document.getElementById('galaxy-container');
+    const gNodesContainer = document.getElementById('galaxy-nodes');
     const gLines = document.getElementById('galaxy-lines');
-    let graphNodes = {}; 
-    let currentCenterId = null;
 
-    // View State
-    let viewState = {
-        scale: 1,
-        panX: 0,
-        panY: 0,
-        isDragging: false,
-        lastX: 0,
-        lastY: 0,
-        isPanAction: false // Distinguish click vs drag
+    let isInitialized = false;
+    let nodesData = []; // Positioned Data
+    let viewState = { scale: 0.3, panX: 0, panY: 0, isDragging: false, lastX: 0, lastY: 0, isPanAction: false };
+
+    // Configuration
+    const MAX_SCALE = 1.0; // Zoom Upper Limit (Default Size)
+    const MIN_SCALE = 0.15;
+    const CATEGORY_CENTERS = {
+        'tot': { x: 0, y: 0, color: '#10b981' },
+        'std': { x: 0, y: -300, color: '#6366f1' },
+        'bat': { x: 700, y: 0, color: '#0ea5e9' },
+        'pit': { x: -700, y: 0, color: '#f43f5e' },
+        'fld': { x: 0, y: 600, color: '#d97706' }
     };
 
     const gIcons = {
@@ -4260,188 +4235,186 @@
         std: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="2" y2="22"/><line x1="2" x2="22" y1="12" y2="12"/></svg>`
     };
 
-    function initGraphData() {
-        terms.forEach(t => { graphNodes[t.id] = { ...t, links: new Set() }; });
-        terms.forEach(t => {
-            if (t.related) {
-                t.related.forEach(rid => {
-                    if (graphNodes[rid]) {
-                        graphNodes[t.id].links.add(rid);
-                        graphNodes[rid].links.add(t.id);
-                    }
-                });
-            }
+    function initGalaxy() {
+        if (isInitialized) return;
+        
+        // 1. Calculate Positions (Simple Clustering)
+        nodesData = terms.map((t, i) => {
+            const center = CATEGORY_CENTERS[t.category] || {x:0, y:0};
+            // Random spread around category center
+            const angle = Math.random() * Math.PI * 2;
+            const dist = Math.random() * 280; // Spread Radius
+            return {
+                ...t,
+                x: center.x + Math.cos(angle) * dist,
+                y: center.y + Math.sin(angle) * dist,
+                links: t.related || []
+            };
         });
+
+        // 2. Render Lines
+        renderLines();
+
+        // 3. Render Nodes
+        nodesData.forEach(node => createNodeElement(node));
+
+        initStars();
+        isInitialized = true;
     }
 
-    function openMindMap(startId = 'war') {
-        if (Object.keys(graphNodes).length === 0) initGraphData();
+    function renderLines() {
+        // Draw lines for relations
+        // To avoid duplicates, store processed pairs
+        const pairs = new Set();
+        let html = '';
+        
+        nodesData.forEach(source => {
+            if (!source.links) return;
+            source.links.forEach(targetId => {
+                const target = nodesData.find(n => n.id === targetId);
+                if (target) {
+                    const pairId = [source.id, target.id].sort().join('-');
+                    if (!pairs.has(pairId)) {
+                        // Offset coordinates for SVG inside Universe (which is centered at 0,0 visually but SVG is large)
+                        // SVG is 10000x10000, Center is 5000,5000
+                        const x1 = 5000 + source.x;
+                        const y1 = 5000 + source.y;
+                        const x2 = 5000 + target.x;
+                        const y2 = 5000 + target.y;
+                        
+                        html += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="g-line" id="line-${pairId}" />`;
+                        pairs.add(pairId);
+                    }
+                }
+            });
+        });
+        gLines.innerHTML = html;
+    }
+
+    function createNodeElement(node) {
+        const el = document.createElement('div');
+        el.className = `g-node g-cat-${node.category}`;
+        el.id = `g-node-${node.id}`;
+        // Set position
+        el.style.left = `${node.x}px`;
+        el.style.top = `${node.y}px`;
+
+        const iconSvg = gIcons[node.category] || gIcons.std;
+
+        el.innerHTML = `
+            <div class="g-content-normal">
+                <div class="icon-normal">${iconSvg}</div>
+                <div>${node.title}</div>
+            </div>
+            <div class="g-content-focus">
+                <div class="gf-icon">${iconSvg}</div>
+                <div class="gf-title">${node.title}</div>
+                <div class="gf-full">${node.full}</div>
+                <div class="gf-desc">${node.short || '...'}</div>
+                <button class="gf-btn" onclick="openModal('${node.id}')">詳細・計算</button>
+            </div>
+        `;
+
+        // Click Handling
+        el.onmouseup = (e) => {
+            e.stopPropagation(); // Prevent panning trigger
+            if (!viewState.isPanAction) {
+                activateNode(node);
+            }
+        };
+
+        gNodesContainer.appendChild(el);
+    }
+
+    function activateNode(node) {
+        // 1. Remove focus from all
+        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused'));
+        
+        // 2. Add focus to clicked
+        const el = document.getElementById(`g-node-${node.id}`);
+        if(el) {
+            el.classList.add('is-focused');
+            // Bring to front handled by z-index in CSS
+        }
+
+        // 3. Pan & Zoom to Node
+        // Target: Center of screen. Node position is (node.x, node.y)
+        // We need to move universe so that node is at (0,0) relative to screen center
+        // targetPanX = -node.x
+        // targetPanY = -node.y
+        const targetScale = MAX_SCALE;
+        
+        animateView(-node.x, -node.y, targetScale);
+    }
+
+    function animateView(targetX, targetY, targetScale) {
+        // Simple animation loop could be added here, for now direct set with CSS transition on container
+        // Note: Using CSS transition for smooth movement
+        gUniverse.style.transition = 'transform 0.8s cubic-bezier(0.19, 1, 0.22, 1)';
+        
+        viewState.panX = targetX;
+        viewState.panY = targetY;
+        viewState.scale = targetScale;
+        updateTransform();
+
+        // Clear transition after animation (to allow drag)
+        setTimeout(() => {
+            gUniverse.style.transition = '';
+        }, 800);
+    }
+
+    function openMindMap() {
+        initGalaxy();
         gOverlay.classList.add('active');
-        initStars();
-        resetView(); // Initialize zoom/pan
-        transitionToNode(startId);
+        fitToScreen(); // Start with overview
     }
 
     function closeMindMap() {
         gOverlay.classList.remove('active');
-        setTimeout(() => {
-            gContainer.innerHTML = '';
-            gLines.innerHTML = '';
-        }, 800);
+        // Unfocus all
+        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused'));
     }
 
-    function resetGalaxy() { 
-        resetView();
-        transitionToNode('war'); 
-    }
-
-    function randomJump() {
-        const keys = Object.keys(graphNodes);
-        transitionToNode(keys[Math.floor(Math.random() * keys.length)]);
-    }
-
-    function transitionToNode(nextId) {
-        if (!graphNodes[nextId]) return;
-        gOverlay.classList.add('warping');
-        
-        // Wrap transition for immersion
-        gContainer.style.opacity = 0;
-        gContainer.style.transform = "translate(-50%, -50%) scale(0.8)";
-
-        setTimeout(() => {
-            renderNodeNetwork(nextId);
-            gOverlay.classList.remove('warping');
-            gContainer.style.opacity = 1;
-            gContainer.style.transform = "translate(-50%, -50%) scale(1)";
-        }, 400);
-    }
-
-    function renderNodeNetwork(centerId) {
-        currentCenterId = centerId;
-        gContainer.innerHTML = '';
-        gLines.innerHTML = '';
-
-        const centerData = graphNodes[centerId];
-        const neighbors = Array.from(centerData.links);
-        
-        createCenterNode(centerData);
-
-        // Responsive Radius
-        const minDim = Math.min(window.innerWidth, window.innerHeight);
-        let radius = minDim * 0.35; 
-        if (radius < 140) radius = 140;
-        if (radius > 320) radius = 320;
-
-        const angleStep = (2 * Math.PI) / (neighbors.length || 1);
-
-        neighbors.forEach((nid, index) => {
-            const nodeData = graphNodes[nid];
-            if (!nodeData) return;
-            
-            const angle = index * angleStep - (Math.PI / 2);
-            const x = Math.cos(angle) * radius;
-            const y = Math.sin(angle) * radius;
-            
-            createSatelliteNode(nodeData, x, y, index * 0.05);
-            drawConnection(0, 0, x, y);
-        });
-    }
-
-    // --- DOM Elements Creation ---
-    function createCenterNode(data) {
-        const el = document.createElement('div');
-        el.className = `g-node center cat-${data.category} g-cat-${data.category}`;
-        el.style.left = `0px`;
-        el.style.top = `0px`;
-        
-        const iconSvg = gIcons[data.category] || gIcons.std;
-        el.innerHTML = `
-            <div class="g-center-content">
-                <div class="g-icon-large">${iconSvg}</div>
-                <div class="g-title-large">${data.title}</div>
-                <div class="g-full-large">${data.full}</div>
-                <div class="g-desc-large">${data.short || '詳細な説明はありません'}</div>
-                <div style="margin-top:15px; font-size:0.75rem; opacity:0.6; letter-spacing:0.1em;">CLICK TO OPEN DETAILS</div>
-            </div>
-        `;
-        // Handle click vs drag
-        el.onmouseup = (e) => {
-            if (!viewState.isPanAction) {
-                closeMindMap(); openModal(data.id);
-            }
-        };
-        gContainer.appendChild(el);
-    }
-
-    function createSatelliteNode(data, x, y, delay) {
-        const el = document.createElement('div');
-        el.className = `g-node satellite cat-${data.category} g-cat-${data.category}`;
-        el.style.left = `${x}px`;
-        el.style.top = `${y}px`;
-        el.style.animationDelay = `${delay}s`; 
-
-        const iconSvg = gIcons[data.category] || gIcons.std;
-        el.innerHTML = `
-            <div class="sat-icon">${iconSvg}</div>
-            <div>${data.title}</div>
-        `;
-        el.onmouseup = (e) => {
-            e.stopPropagation();
-            if (!viewState.isPanAction) {
-                transitionToNode(data.id);
-            }
-        };
-        gContainer.appendChild(el);
-    }
-
-    function drawConnection(x1, y1, x2, y2) {
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight * 0.42; 
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', cx + x1);
-        line.setAttribute('y1', cy + y1);
-        line.setAttribute('x2', cx + x2);
-        line.setAttribute('y2', cy + y2);
-        line.setAttribute('class', 'g-line');
-        gLines.appendChild(line);
-    }
-
-    // --- Pan & Zoom Logic ---
     function updateTransform() {
         gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`;
     }
 
-    function resetView() {
-        viewState.scale = 1;
+    function fitToScreen() {
+        // Reset pan
         viewState.panX = 0;
         viewState.panY = 0;
+        // Calculate scale to fit roughly 1600x1200 area
+        const minDim = Math.min(window.innerWidth, window.innerHeight);
+        viewState.scale = Math.max(minDim / 2000, MIN_SCALE); // Keep it visible
         updateTransform();
+        
+        // Remove focus
+        document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused'));
     }
 
     function zoomIn() {
-        viewState.scale = Math.min(viewState.scale * 1.2, 3);
+        viewState.scale = Math.min(viewState.scale * 1.3, MAX_SCALE);
         updateTransform();
     }
 
     function zoomOut() {
-        viewState.scale = Math.max(viewState.scale / 1.2, 0.4);
+        viewState.scale = Math.max(viewState.scale / 1.3, MIN_SCALE);
         updateTransform();
     }
 
-    // Mouse Wheel Zoom
+    // --- Interaction Events (Pan & Zoom) ---
+    // Wheel
     gOverlay.addEventListener('wheel', (e) => {
         e.preventDefault();
         const delta = e.deltaY * -0.001;
-        const newScale = Math.min(Math.max(0.4, viewState.scale + delta), 3);
+        const newScale = Math.min(Math.max(MIN_SCALE, viewState.scale + delta), MAX_SCALE);
         viewState.scale = newScale;
         updateTransform();
     });
 
-    // Drag (Pan) Events
+    // Drag
     gOverlay.addEventListener('mousedown', (e) => {
-        // Ignore clicks on controls
         if (e.target.closest('.galaxy-controls')) return;
-        
         viewState.isDragging = true;
         viewState.isPanAction = false;
         viewState.lastX = e.clientX;
@@ -4451,29 +4424,32 @@
 
     window.addEventListener('mousemove', (e) => {
         if (!viewState.isDragging) return;
-        
         const dx = e.clientX - viewState.lastX;
         const dy = e.clientY - viewState.lastY;
         
-        // If moved significantly, consider it a pan action (prevent click)
-        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-            viewState.isPanAction = true;
-        }
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) viewState.isPanAction = true;
 
         viewState.panX += dx;
         viewState.panY += dy;
         viewState.lastX = e.clientX;
         viewState.lastY = e.clientY;
-        
-        updateTransform();
+        gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`;
     });
 
     window.addEventListener('mouseup', () => {
         viewState.isDragging = false;
         gOverlay.style.cursor = 'grab';
     });
+    
+    // Background Click -> Deselect/Reset Focus (but keep zoom)
+    gOverlay.addEventListener('click', (e) => {
+        if (viewState.isPanAction) return;
+        if (e.target === gOverlay || e.target === gUniverse) {
+             document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused'));
+        }
+    });
 
-    // Touch Support for Pan
+    // Touch Support
     gOverlay.addEventListener('touchstart', (e) => {
         if (e.target.closest('.galaxy-controls')) return;
         if(e.touches.length === 1) {
@@ -4495,44 +4471,27 @@
             viewState.panY += dy;
             viewState.lastX = e.touches[0].clientX;
             viewState.lastY = e.touches[0].clientY;
-            updateTransform();
+            gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`;
         }
     }, {passive: false});
 
-    window.addEventListener('touchend', () => {
-        viewState.isDragging = false;
-    });
+    window.addEventListener('touchend', () => viewState.isDragging = false);
 
-
-    // --- Starfield ---
+    // Stars
     function initStars() {
         const starfield = document.getElementById('starfield');
         if (starfield.children.length > 0) return; 
-
-        for(let i=0; i<80; i++) {
+        for(let i=0; i<100; i++) {
             const star = document.createElement('div');
             star.className = 'star';
-            
-            const angle = Math.random() * Math.PI * 2;
-            const destX = Math.cos(angle) * 1000 + 'px';
-            const destY = Math.sin(angle) * 1000 + 'px';
-            
-            star.style.left = '50%'; star.style.top = '50%';
-            star.style.setProperty('--destX', destX);
-            star.style.setProperty('--destY', destY);
-            star.style.setProperty('--duration', (Math.random() * 2 + 1) + 's');
-            star.style.width = Math.random() * 2 + 'px';
-            star.style.height = star.style.width;
-            star.style.animationDelay = Math.random() * 2 + 's';
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            const size = Math.random() * 2 + 1;
+            star.style.width = size + 'px';
+            star.style.height = size + 'px';
             starfield.appendChild(star);
         }
     }
-
-    window.addEventListener('resize', () => {
-        if (gOverlay.classList.contains('active') && currentCenterId) {
-            renderNodeNetwork(currentCenterId);
-        }
-    });
 </script>
 
 </body>
