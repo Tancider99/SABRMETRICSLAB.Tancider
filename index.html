@@ -2751,6 +2751,7 @@
 
         // Initialize Preset List
         updatePresetList();
+        updateLeaguePresetList();
     }
 
     // Logic to check advanced inputs
@@ -2937,6 +2938,7 @@
         });
         
         updatePresetList();
+        updateLeaguePresetList();
     }
 
     // --- Smart Text Parser Logic ---
@@ -3442,6 +3444,112 @@
             updatePresetList();
             select.value = ""; // Reset selection
             alert(`"${name}" を削除しました`);
+        }
+    }
+    /* --- League Preset Logic (Advanced Settings) --- */
+    const LEAGUE_STORAGE_KEY = 'sabr_league_presets';
+
+    function getLeaguePresets() {
+        try {
+            const stored = localStorage.getItem(LEAGUE_STORAGE_KEY);
+            return stored ? JSON.parse(stored) : {};
+        } catch (e) {
+            console.error("Failed to parse league presets", e);
+            return {};
+        }
+    }
+
+    function saveLeaguePresets(presets) {
+        localStorage.setItem(LEAGUE_STORAGE_KEY, JSON.stringify(presets));
+    }
+
+    window.updateLeaguePresetList = function() {
+        const select = document.getElementById('league-preset-select');
+        if (!select) return;
+
+        const presets = getLeaguePresets();
+        select.innerHTML = '<option value="">設定を選択...</option>';
+        
+        Object.keys(presets).forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+    }
+
+    window.saveLeaguePreset = function() {
+        const nameInput = document.getElementById('league-preset-name');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            alert('設定名を入力してください');
+            return;
+        }
+
+        const data = {};
+        // ADVANCED_LEAGUE_INPUTS で定義されたIDのみを収集
+        ADVANCED_LEAGUE_INPUTS.forEach(inp => {
+            const el = document.getElementById(`calc-${inp.id}`);
+            if (el && el.value) {
+                data[inp.id] = el.value;
+            }
+        });
+
+        if (Object.keys(data).length === 0) {
+            alert('保存する詳細設定データがありません');
+            return;
+        }
+
+        const presets = getLeaguePresets();
+        if (presets[name] && !confirm(`"${name}" は既に存在します。上書きしますか？`)) {
+            return;
+        }
+
+        presets[name] = data;
+        saveLeaguePresets(presets);
+        
+        updateLeaguePresetList();
+        document.getElementById('league-preset-select').value = name;
+        nameInput.value = '';
+        alert(`リーグ設定 "${name}" を保存しました`);
+    }
+
+    window.loadLeaguePreset = function() {
+        const select = document.getElementById('league-preset-select');
+        const name = select.value;
+        if (!name) return;
+
+        const presets = getLeaguePresets();
+        const data = presets[name];
+        
+        if (data) {
+            Object.keys(data).forEach(key => {
+                const el = document.getElementById(`calc-${key}`);
+                if (el) {
+                    el.value = data[key];
+                    // 視覚的フィードバック
+                    el.style.backgroundColor = "#e0f2fe"; // 薄い青
+                    setTimeout(() => el.style.backgroundColor = "", 1000);
+                }
+            });
+            // 変更検知（警告表示の更新など）
+            if (window.checkAdvancedChanges) window.checkAdvancedChanges();
+        }
+    }
+
+    window.removeLeaguePreset = function() {
+        const select = document.getElementById('league-preset-select');
+        const name = select.value;
+        if (!name) return;
+
+        const presets = getLeaguePresets();
+        if (presets[name]) {
+            delete presets[name];
+            saveLeaguePresets(presets);
+            updateLeaguePresetList();
+            select.value = "";
+            alert(`リーグ設定 "${name}" を削除しました`);
         }
     }
 
