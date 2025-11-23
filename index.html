@@ -4018,12 +4018,14 @@
 <style>
     /* --- Settings & Variables --- */
     :root {
-        --g-node-size: 80px;
+        --g-node-size: 85px;         /* 通常時のノードサイズ */
+        --g-focus-size: 300px;       /* フォーカス時のサイズ */
         --g-font-size: 0.8rem;
     }
     @media (max-width: 768px) {
         :root {
-            --g-node-size: 60px;
+            --g-node-size: 65px;
+            --g-focus-size: 260px; /* モバイルでも少し大きめに */
             --g-font-size: 0.65rem;
         }
     }
@@ -4037,7 +4039,7 @@
         transition: opacity 0.5s ease;
         overflow: hidden;
         cursor: grab;
-        touch-action: none; /* iOS/Android scroll disable */
+        touch-action: none;
         user-select: none;
         -webkit-user-select: none;
     }
@@ -4047,7 +4049,7 @@
     /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0.6; pointer-events: none; will-change: opacity;
+        opacity: 0.6; pointer-events: none;
     }
 
     /* --- Universe Wrapper --- */
@@ -4057,8 +4059,7 @@
         width: 0; height: 0;
         transform-style: preserve-3d;
         will-change: transform;
-        /* Dragging performance */
-        backface-visibility: hidden; 
+        backface-visibility: hidden;
     }
 
     /* --- Nodes --- */
@@ -4069,21 +4070,19 @@
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        /* Animation for appearance and state change only, NOT position */
-        transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), background-color 0.3s, border-color 0.3s, opacity 0.3s;
-        backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
+        /* モバイル負荷軽減のため backdrop-filter は削除 */
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
         z-index: 10;
-        background: rgba(30, 41, 59, 0.85);
+        background: rgba(30, 41, 59, 0.9); /* 少し濃いめにして視認性確保 */
         color: #94a3b8;
         font-weight: 700;
         font-size: var(--g-font-size);
         touch-action: none;
     }
 
-    /* Hover effect (Desktop) */
+    /* Hover effect (Desktop only) */
     @media (hover: hover) {
         .g-node:hover {
             z-index: 50;
@@ -4095,8 +4094,9 @@
 
     /* State: Dimmed */
     .g-node.is-dimmed {
-        opacity: 0.2;
+        opacity: 0.15;
         transform: translate(-50%, -50%) scale(0.8);
+        pointer-events: none;
     }
 
     /* State: Related */
@@ -4107,18 +4107,61 @@
         z-index: 40;
     }
 
-    /* State: Focused (Expanded) */
+    /* --- State: Focused (Detail View) --- */
     .g-node.is-focused {
+        width: var(--g-focus-size); height: var(--g-focus-size);
         z-index: 100;
-        background: rgba(15, 23, 42, 0.95);
-        border: 2px solid rgba(255,255,255,0.9);
-        box-shadow: 0 0 50px rgba(255,255,255,0.15), inset 0 0 30px rgba(255,255,255,0.1);
-        color: white;
-        transform: translate(-50%, -50%) scale(2.2) !important;
+        background: rgba(15, 23, 42, 0.95); /* 不透明度を上げて重なりを防ぐ */
+        border: 2px solid rgba(255,255,255,0.6);
+        box-shadow: 0 0 60px rgba(0,0,0,0.5);
+        transform: translate(-50%, -50%) scale(1) !important;
+        cursor: default;
     }
     
-    .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; transition: 0.3s; }
-    .g-node.is-focused .icon-normal svg { width: 36px; height: 36px; margin-bottom: 8px; opacity: 1; }
+    /* Content Switching */
+    .g-content-normal {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        width: 100%; height: 100%;
+        opacity: 1; transition: opacity 0.2s;
+    }
+    .g-node.is-focused .g-content-normal {
+        display: none; opacity: 0;
+    }
+
+    .g-content-focus {
+        display: none; opacity: 0;
+        width: 100%; height: 100%;
+        flex-direction: column; align-items: center; justify-content: center;
+        padding: 20px; box-sizing: border-box;
+    }
+    .g-node.is-focused .g-content-focus {
+        display: flex; opacity: 1;
+        animation: fadeIn 0.4s ease forwards;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Focus Content Styles */
+    .gf-icon svg { width: 40px; height: 40px; margin-bottom: 8px; opacity: 1; }
+    .gf-title { font-size: 1.6rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; color: white; }
+    .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
+    .gf-desc { 
+        font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; 
+        display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; 
+        white-space: normal;
+    }
+    .gf-btn { 
+        padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
+        background: rgba(255,255,255,0.15); color: white; cursor: pointer; transition: 0.2s; 
+        font-size: 0.8rem; font-weight: bold; pointer-events: auto;
+    }
+    .gf-btn:hover { background: rgba(255,255,255,0.3); }
+
+    @media (max-width: 768px) {
+        .gf-title { font-size: 1.4rem; }
+        .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 4; }
+    }
+    
+    .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; }
     
     /* --- Lines --- */
     #galaxy-lines { 
@@ -4135,29 +4178,25 @@
     .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); }
     .g-cat-bat.is-focused { border-color: #0ea5e9; text-shadow: 0 0 10px rgba(14, 165, 233, 0.8); }
     .g-cat-bat .icon-normal { color: #0ea5e9; }
-    .g-cat-bat.is-focused .icon-normal { color: #e0f2fe; }
-
+    
     .g-cat-pit { border-color: rgba(244, 63, 94, 0.4); }
     .g-cat-pit.is-focused { border-color: #f43f5e; text-shadow: 0 0 10px rgba(244, 63, 94, 0.8); }
     .g-cat-pit .icon-normal { color: #f43f5e; }
-    .g-cat-pit.is-focused .icon-normal { color: #ffe4e6; }
-
+    
     .g-cat-fld { border-color: rgba(217, 119, 6, 0.4); }
     .g-cat-fld.is-focused { border-color: #d97706; text-shadow: 0 0 10px rgba(217, 119, 6, 0.8); }
     .g-cat-fld .icon-normal { color: #d97706; }
-    .g-cat-fld.is-focused .icon-normal { color: #fef3c7; }
-
+    
     .g-cat-tot { border-color: rgba(16, 185, 129, 0.4); }
     .g-cat-tot.is-focused { border-color: #10b981; text-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
     .g-cat-tot .icon-normal { color: #10b981; }
-    .g-cat-tot.is-focused .icon-normal { color: #d1fae5; }
 
     /* --- Controls UI --- */
     .galaxy-controls {
         position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
         display: flex; gap: 12px; z-index: 1000;
         padding: 8px 16px; border-radius: 40px;
-        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.15);
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     }
     .g-btn {
@@ -4209,7 +4248,7 @@
     };
 
     // Zoom Constraints
-    const MAX_SCALE = 1.2; 
+    const MAX_SCALE = 1.0; 
     const MIN_SCALE = 0.35;
 
     const CATEGORY_CENTERS = {
@@ -4244,7 +4283,7 @@
         });
 
         // Collision Resolution
-        const NODE_RADIUS = 130; 
+        const NODE_RADIUS = 140; 
         for (let k = 0; k < 50; k++) {
             for (let i = 0; i < nodesData.length; i++) {
                 for (let j = i + 1; j < nodesData.length; j++) {
@@ -4301,36 +4340,34 @@
         el.style.top = `${node.y}px`;
 
         const iconSvg = gIcons[node.category] || gIcons.std;
+        
+        // Detailed Content Structure
         el.innerHTML = `
-            <div class="icon-normal">${iconSvg}</div>
-            <div>${node.title}</div>
+            <div class="g-content-normal">
+                <div class="icon-normal">${iconSvg}</div>
+                <div>${node.title}</div>
+            </div>
+            <div class="g-content-focus">
+                <div class="gf-icon">${iconSvg}</div>
+                <div class="gf-title">${node.title}</div>
+                <div class="gf-full">${node.full}</div>
+                <div class="gf-desc">${node.short || '...'}</div>
+                <button class="gf-btn" onclick="openModal('${node.id}')">詳細・計算</button>
+            </div>
         `;
 
-        // Interaction Handling
-        const handleTap = (e) => {
-            // Prevent interaction if it was a drag
+        // Click Handling (Unified)
+        el.onclick = (e) => {
             if (viewState.isDragging) return;
-            
-            // Allow event to propagate if needed, but for our app stop here
-            e.stopPropagation(); 
-            // Also prevent default mouse event if touch
-            if (e.type === 'touchend') e.preventDefault();
-
+            e.stopPropagation();
             activateNode(node);
         };
 
-        // Use click for mouse, touchend logic handles drag check
-        el.onclick = handleTap;
-        // touchend is handled by window listener + isDragging check logic or direct binding
-        // Here we rely on click for Mouse. For Touch, we need to ensure click fires ONLY if not dragged.
-        // Browsers fire click after touchend if not canceled.
-        // We will manage "isDragging" state globally very carefully.
-        
         gNodesContainer.appendChild(el);
     }
 
     function activateNode(node) {
-        // Clear previous state
+        // Reset previous
         document.querySelectorAll('.g-node').forEach(el => el.classList.remove('is-focused', 'is-related', 'is-dimmed'));
         document.querySelectorAll('.g-line').forEach(el => el.classList.remove('is-related', 'is-dimmed'));
 
@@ -4362,14 +4399,11 @@
     }
 
     function animateView(targetX, targetY, targetScale) {
-        // Set transition for smooth movement
         gUniverse.style.transition = 'transform 0.6s cubic-bezier(0.19, 1, 0.22, 1)';
         viewState.panX = targetX;
         viewState.panY = targetY;
         viewState.scale = targetScale;
         updateTransform();
-        
-        // Clear transition so dragging is instant again
         setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
     }
 
@@ -4394,7 +4428,6 @@
         viewState.panX = 0; viewState.panY = 0;
         const minDim = Math.min(window.innerWidth, window.innerHeight);
         viewState.scale = Math.max(minDim / 2400, MIN_SCALE);
-        // Animate fit
         gUniverse.style.transition = 'transform 0.6s ease';
         updateTransform();
         setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
@@ -4416,7 +4449,7 @@
         setTimeout(() => { gUniverse.style.transition = 'none'; }, 300);
     }
 
-    /* --- Input Handling (Unified Touch/Mouse) --- */
+    /* --- Input Handling --- */
     
     function getDistance(touches) {
         const dx = touches[0].clientX - touches[1].clientX;
@@ -4424,23 +4457,20 @@
         return Math.sqrt(dx * dx + dy * dy);
     }
 
-    // Wheel Zoom
     gOverlay.addEventListener('wheel', (e) => {
         e.preventDefault();
         const delta = e.deltaY * -0.001;
         viewState.scale = Math.min(Math.max(MIN_SCALE, viewState.scale + delta), MAX_SCALE);
-        // Disable transition for instant wheel response
         gUniverse.style.transition = 'none'; 
         updateTransform();
     }, {passive: false});
 
-    // Pointer Events (Mouse + Touch)
     const handleStart = (x, y) => {
         if (viewState.isPinching) return;
-        viewState.isDragging = false; // Reset initially, becomes true if moved
+        viewState.isDragging = false; 
         viewState.lastX = x;
         viewState.lastY = y;
-        gUniverse.style.transition = 'none'; // Critical for direct tracking
+        gUniverse.style.transition = 'none'; 
     };
 
     const handleMove = (x, y) => {
@@ -4449,7 +4479,6 @@
         const dx = x - viewState.lastX;
         const dy = y - viewState.lastY;
 
-        // Threshold to treat as drag vs tap
         if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
             viewState.isDragging = true;
         }
@@ -4463,28 +4492,21 @@
         viewState.lastY = y;
     };
 
-    // Mouse Listeners
     gOverlay.addEventListener('mousedown', (e) => {
         if (e.target.closest('.galaxy-controls')) return;
         handleStart(e.clientX, e.clientY);
         gOverlay.style.cursor = 'grabbing';
     });
     window.addEventListener('mousemove', (e) => {
-        // Only if mouse down (we don't track buttons globally easily without flags, but Overlay is modal)
-        // We use a flag inside overlay logic, but need global move for drag-out
         if (gOverlay.style.cursor === 'grabbing') {
             handleMove(e.clientX, e.clientY);
         }
     });
     window.addEventListener('mouseup', () => {
         gOverlay.style.cursor = 'grab';
-        // Note: isDragging stays true until next mousedown resets it, 
-        // ensuring 'click' handlers on nodes can check it.
         setTimeout(() => { viewState.isDragging = false; }, 50);
     });
 
-
-    // Touch Listeners
     gOverlay.addEventListener('touchstart', (e) => {
         if (e.target.closest('.galaxy-controls')) return;
         
@@ -4515,11 +4537,9 @@
         if (e.touches.length < 2) {
             viewState.isPinching = false;
         }
-        // Delay dragging reset slightly to allow click handlers to fire if needed
         setTimeout(() => { viewState.isDragging = false; }, 50);
     });
 
-    // Stars
     function initStars() {
         const starfield = document.getElementById('starfield');
         if (starfield.children.length > 0) return; 
