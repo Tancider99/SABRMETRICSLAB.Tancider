@@ -4028,13 +4028,11 @@
             --g-focus-size: 260px;
             --g-font-size: 0.65rem;
         }
-        /* 【超軽量化】モバイルでは通常時の重いエフェクト（影）をカット */
         .g-node {
             box-shadow: none !important;
             border: 1px solid rgba(255,255,255,0.3) !important;
-            background: rgba(30, 41, 59, 0.95) !important; /* 透過を減らして描画負荷軽減 */
+            background: rgba(30, 41, 59, 0.95) !important;
         }
-        /* フォーカス時のみ最低限の影をつける */
         .g-node.is-focused {
             box-shadow: 0 0 30px rgba(0,0,0,0.5) !important;
         }
@@ -4046,7 +4044,7 @@
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
         z-index: 9999;
         display: none; opacity: 0;
-        transition: opacity 0.4s ease; /* アニメーション時間短縮 */
+        transition: opacity 0.4s ease;
         overflow: hidden;
         cursor: grab;
         touch-action: none;
@@ -4080,7 +4078,6 @@
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
-        /* プロパティを限定して軽量化 */
         transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1), opacity 0.3s;
         box-shadow: 0 0 15px rgba(0,0,0,0.3), inset 0 0 10px rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.2);
@@ -4108,7 +4105,6 @@
         border-color: rgba(255,255,255,0.9);
         z-index: 40;
     }
-    /* モバイル以外では関連ノードも光らせる */
     @media (min-width: 769px) {
         .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.15); }
     }
@@ -4118,7 +4114,6 @@
         z-index: 100;
         background: rgba(15, 23, 42, 0.98) !important;
         border: 2px solid rgba(255,255,255,0.6) !important;
-        /* Shadow defined in media query */
         transform: translate(-50%, -50%) scale(1) !important;
         cursor: default;
     }
@@ -4138,11 +4133,16 @@
     .gf-title { font-size: 1.6rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; color: white; }
     .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
     .gf-desc { font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
+    
+    /* ボタンのスタイル修正: ポインターイベントを確実に有効化 */
     .gf-btn { 
-        padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
+        padding: 8px 24px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.4); 
         background: rgba(255,255,255,0.15); color: white; cursor: pointer; 
-        font-size: 0.8rem; font-weight: bold; pointer-events: auto;
+        font-size: 0.85rem; font-weight: bold; pointer-events: auto; 
+        z-index: 200; position: relative;
     }
+    .gf-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
+
     @media (max-width: 768px) { .gf-title { font-size: 1.4rem; } .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 4; } }
     .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; }
     
@@ -4200,7 +4200,6 @@
     const MAX_SCALE = 1.2; const MIN_SCALE = 0.35;
 
     const CATEGORY_CENTERS = { 'tot': { x: 0, y: 0 }, 'std': { x: 0, y: -450 }, 'bat': { x: 800, y: 0 }, 'pit': { x: -800, y: 0 }, 'fld': { x: 0, y: 650 } };
-    // 関連性定義（補完用）
     const extraRelations = {
         'avg': ['obp', 'slg', 'ops', 'babip', 'woba'], 'obp': ['avg', 'slg', 'ops', 'bb_pct', 'isod', 'woba'], 'slg': ['avg', 'obp', 'ops', 'iso', 'hr_ab', 'woba'],
         'ops': ['avg', 'obp', 'slg', 'woba', 'wrc_plus'], 'woba': ['ops', 'wrc_plus', 'wrc', 'wraa', 'xwoba'], 'wrc_plus': ['woba', 'wraa', 'war'],
@@ -4294,16 +4293,25 @@
                 <div class="gf-title">${node.title}</div>
                 <div class="gf-full">${node.full}</div>
                 <div class="gf-desc">${node.short || '...'}</div>
-                <button class="gf-btn" onclick="openModal('${node.id}')">詳細・計算</button>
+                <button class="gf-btn" onclick="closeMindMap(); openModal('${node.id}')">詳細・計算</button>
             </div>
         `;
 
+        // 【修正ポイント】ボタンクリックを判定し、拡大処理をブロックする
         const handleTap = (e) => {
+            // もしクリックされた要素がボタン(.gf-btn)なら、親の拡大処理はしない
+            if (e.target.closest('.gf-btn')) {
+                return; // ボタンのonClickに任せる
+            }
+
             if(viewState.isDragging) return;
             e.stopPropagation();
+            // ボタン以外の場合のみ、デフォルト動作（ダブルタップズームなど）を防ぐ
             if(e.type === 'touchend') e.preventDefault();
+            
             activateNode(node);
         };
+        
         el.onclick = handleTap;
         el.ontouchend = handleTap;
         gNodesContainer.appendChild(el);
@@ -4329,7 +4337,7 @@
         document.querySelectorAll('.g-line').forEach(line => {
             const src = line.getAttribute('data-src'), tgt = line.getAttribute('data-tgt');
             if((src===currentId && relatedIds.includes(tgt)) || (tgt===currentId && relatedIds.includes(src))) line.classList.add('is-related');
-            else if(extendedIds.has(src) && extendedIds.has(tgt)) line.classList.add('is-dimmed'); // 2次関連は薄く
+            else if(extendedIds.has(src) && extendedIds.has(tgt)) line.classList.add('is-dimmed');
             else line.classList.add('is-dimmed');
         });
 
@@ -4344,7 +4352,6 @@
     // Background Click to Unfocus
     gOverlay.addEventListener('click', (e) => {
         if(viewState.isDragging) return;
-        // コントロールパネルやノード以外の場所（背景）をクリックした場合のみ解除
         if(e.target.closest('.g-node') || e.target.closest('.galaxy-controls')) return;
         resetFocus();
     });
@@ -4409,7 +4416,6 @@
     function initStars() {
         const starfield = document.getElementById('starfield');
         if(starfield.children.length > 0) return;
-        // 超軽量化：モバイルなら星を激減させる
         const isMobile = window.innerWidth < 768;
         const starCount = isMobile ? 40 : 120; 
         for(let i=0; i<starCount; i++){
