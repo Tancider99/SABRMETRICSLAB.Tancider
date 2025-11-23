@@ -4018,8 +4018,8 @@
 <style>
     /* --- Settings & Variables --- */
     :root {
-        --g-node-size: 85px;         /* 通常時のノードサイズ */
-        --g-focus-size: 300px;       /* フォーカス時のサイズ */
+        --g-node-size: 85px;
+        --g-focus-size: 300px;
         --g-font-size: 0.8rem;
     }
     @media (max-width: 768px) {
@@ -4028,7 +4028,6 @@
             --g-focus-size: 260px;
             --g-font-size: 0.65rem;
         }
-        /* モバイル用軽量化スタイル */
         .g-node {
             box-shadow: none !important;
             border: 1px solid rgba(255,255,255,0.3) !important;
@@ -4045,12 +4044,13 @@
         background: radial-gradient(ellipse at center, #1e293b 0%, #020617 100%);
         z-index: 9999;
         display: none; opacity: 0;
-        transition: opacity 0.4s ease;
+        transition: opacity 0.6s ease;
         overflow: hidden;
         cursor: grab;
         touch-action: none;
         user-select: none;
         -webkit-user-select: none;
+        perspective: 1000px; /* 3D演出用 */
     }
     #galaxy-overlay.active { display: flex; opacity: 1; }
     #galaxy-overlay:active { cursor: grabbing; }
@@ -4058,24 +4058,42 @@
     /* Stars */
     .star {
         position: absolute; background: white; border-radius: 50%;
-        opacity: 0.6; pointer-events: none; will-change: opacity;
+        opacity: 0.6; pointer-events: none; transition: transform 0.2s;
+    }
+    /* 起動時のワープ効果 */
+    #galaxy-overlay.launching .star {
+        opacity: 0.8;
+        transform: scale(1, 15); /* 縦に引き伸ばして流線にする */
+        transition: transform 0.8s cubic-bezier(0.2, 1, 0.3, 1);
     }
 
     /* --- Universe Wrapper --- */
     #galaxy-universe {
-        position: absolute;
-        top: 50%; left: 50%;
-        width: 0; height: 0;
-        transform-style: preserve-3d;
-        will-change: transform;
+        position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+        transform-style: preserve-3d; will-change: transform;
         backface-visibility: hidden;
+    }
+
+    /* --- Cosmos Container (Animation Wrapper) --- */
+    #galaxy-cosmos {
+        position: absolute; top: 0; left: 0; width: 0; height: 0;
+        transform-style: preserve-3d;
+    }
+    
+    /* 銀河の出現アニメーション */
+    .launching #galaxy-cosmos {
+        animation: galaxyLaunch 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+    @keyframes galaxyLaunch {
+        0% { transform: scale(0) rotate(45deg); opacity: 0; }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
     }
 
     /* --- Nodes --- */
     .g-node {
         position: absolute;
         width: var(--g-node-size); height: var(--g-node-size);
-        transform: translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(0); /* 初期状態はスケール0 */
         border-radius: 50%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         text-align: center; cursor: pointer;
@@ -4088,6 +4106,13 @@
         font-weight: 700;
         font-size: var(--g-font-size);
         touch-action: none;
+        /* ポップアップアニメーション */
+        animation: nodePop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        animation-play-state: paused; /* JSで開始 */
+    }
+    @keyframes nodePop {
+        from { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+        to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
 
     @media (hover: hover) {
@@ -4100,16 +4125,10 @@
     }
 
     .g-node.is-dimmed { opacity: 0.1; transform: translate(-50%, -50%) scale(0.8); pointer-events: none; }
-    
-    .g-node.is-related {
-        opacity: 1;
-        border-color: rgba(255,255,255,0.9);
-        z-index: 40;
-    }
-    @media (min-width: 769px) {
-        .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.15); }
-    }
+    .g-node.is-related { opacity: 1; border-color: rgba(255,255,255,0.9); z-index: 40; }
+    @media (min-width: 769px) { .g-node.is-related { box-shadow: 0 0 20px rgba(255,255,255,0.15); } }
 
+    /* Focused State */
     .g-node.is-focused {
         width: var(--g-focus-size); height: var(--g-focus-size);
         z-index: 100;
@@ -4134,22 +4153,22 @@
     .gf-title { font-size: 1.6rem; font-weight: 900; line-height: 1.1; margin-bottom: 4px; color: white; }
     .gf-full { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 10px; color: #cbd5e1; }
     .gf-desc { font-size: 0.8rem; line-height: 1.4; color: #cbd5e1; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; }
-    
     .gf-btn { 
         padding: 8px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.3); 
         background: rgba(255,255,255,0.15); color: white; cursor: pointer; 
         font-size: 0.8rem; font-weight: bold; pointer-events: auto; z-index: 200; position: relative;
     }
     .gf-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.3); }
-
     @media (max-width: 768px) { .gf-title { font-size: 1.4rem; } .gf-desc { font-size: 0.75rem; -webkit-line-clamp: 4; } }
     .g-node .icon-normal svg { width: 28px; height: 28px; margin-bottom: 4px; opacity: 0.8; }
     
-    /* --- Lines --- */
+    /* Lines */
     #galaxy-lines { position: absolute; top: -5000px; left: -5000px; width: 10000px; height: 10000px; pointer-events: none; z-index: 1; }
-    .g-line { stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: opacity 0.3s; }
-    .g-line.is-dimmed { opacity: 0.05; }
-    .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1; }
+    .g-line { stroke: rgba(255,255,255,0.1); stroke-width: 1.5; transition: opacity 0.3s; opacity: 0; }
+    .active .g-line { animation: lineFadeIn 1s 0.8s forwards; } /* 遅れてライン表示 */
+    @keyframes lineFadeIn { to { opacity: 1; } }
+    .g-line.is-dimmed { opacity: 0.05 !important; }
+    .g-line.is-related { stroke: rgba(255,255,255,0.5); stroke-width: 2.0; opacity: 1 !important; }
 
     /* Category Colors */
     .g-cat-bat { border-color: rgba(14, 165, 233, 0.4); } .g-cat-bat.is-focused { border-color: #0ea5e9; } .g-cat-bat .icon-normal { color: #0ea5e9; }
@@ -4163,6 +4182,7 @@
         display: flex; gap: 12px; z-index: 1000;
         padding: 8px 16px; border-radius: 40px;
         background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.15);
+        opacity: 0; animation: fadeIn 1s 1.2s forwards; /* コントロールも遅れて登場 */
     }
     .g-btn {
         background: transparent; border: none; color: rgba(255,255,255,0.8); padding: 0; border-radius: 50%; cursor: pointer;
@@ -4175,8 +4195,10 @@
 <div id="galaxy-overlay">
     <div id="starfield"></div>
     <div id="galaxy-universe">
-        <svg id="galaxy-lines"></svg>
-        <div id="galaxy-nodes"></div>
+        <div id="galaxy-cosmos">
+            <svg id="galaxy-lines"></svg>
+            <div id="galaxy-nodes"></div>
+        </div>
     </div>
     <div class="galaxy-controls">
         <button class="g-btn" onclick="zoomIn()" title="拡大"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg></button>
@@ -4195,12 +4217,7 @@
 
     let isInitialized = false;
     let nodesData = [];
-    let viewState = { 
-        scale: 0.35, panX: 0, panY: 0, 
-        isDragging: false, lastX: 0, lastY: 0, 
-        isPinching: false, pinchStartDist: 0, pinchStartScale: 1,
-        suppressClick: false // ピンチ後のクリック誤爆防止フラグ
-    };
+    let viewState = { scale: 0.35, panX: 0, panY: 0, isDragging: false, lastX: 0, lastY: 0, isPinching: false, pinchStartDist: 0, pinchStartScale: 1, suppressClick: false };
     const MAX_SCALE = 1.2; const MIN_SCALE = 0.35;
 
     const CATEGORY_CENTERS = { 'tot': { x: 0, y: 0 }, 'std': { x: 0, y: -450 }, 'bat': { x: 800, y: 0 }, 'pit': { x: -800, y: 0 }, 'fld': { x: 0, y: 650 } };
@@ -4288,6 +4305,9 @@
         el.id = `g-node-${node.id}`;
         el.style.left = `${node.x}px`;
         el.style.top = `${node.y}px`;
+        // ランダムな遅延時間をセットしてシーケンシャルポップアップを実現
+        el.style.animationDelay = `${Math.random() * 0.8 + 0.2}s`;
+
         const iconSvg = gIcons[node.category] || gIcons.std;
         
         el.innerHTML = `
@@ -4301,16 +4321,15 @@
             </div>
         `;
 
-        // Click Handling with Suppress Check
-        el.onclick = (e) => {
-            if (e.target.closest('.gf-btn')) return; // Button handled by inline onclick
-            // ドラッグ中またはピンチ直後はクリックを無視
-            if (viewState.isDragging || viewState.suppressClick) return; 
-            
+        const handleTap = (e) => {
+            if (e.target.closest('.gf-btn')) return; 
+            if(viewState.isDragging || viewState.suppressClick) return;
             e.stopPropagation();
+            if(e.type === 'touchend') e.preventDefault();
             activateNode(node);
         };
-        
+        el.onclick = handleTap;
+        el.ontouchend = handleTap;
         gNodesContainer.appendChild(el);
     }
 
@@ -4359,15 +4378,29 @@
         setTimeout(() => { gUniverse.style.transition = 'none'; }, 600);
     }
 
-    function openMindMap() { initGalaxy(); gOverlay.classList.add('active'); fitToScreen(); }
+    function openMindMap() {
+        initGalaxy();
+        gOverlay.classList.add('active');
+        
+        // エフェクト用クラスの付与
+        gOverlay.classList.add('launching');
+        // ノードアニメーションの再生開始
+        document.querySelectorAll('.g-node').forEach(el => {
+            el.style.animationPlayState = 'running';
+        });
+
+        fitToScreen();
+        
+        // アニメーション終了後にクラスを外す
+        setTimeout(() => { gOverlay.classList.remove('launching'); }, 1500);
+    }
+
     function closeMindMap() { gOverlay.classList.remove('active'); resetFocus(); }
     
     function updateTransform() { gUniverse.style.transform = `translate(${viewState.panX}px, ${viewState.panY}px) scale(${viewState.scale})`; }
-    
     function fitToScreen() {
         viewState.panX = 0; viewState.panY = 0;
         const minDim = Math.min(window.innerWidth, window.innerHeight);
-        // デフォルト倍率を上げる (分母を小さくする: 2400 -> 1500)
         viewState.scale = Math.max(minDim / 1500, MIN_SCALE);
         gUniverse.style.transition = 'transform 0.6s ease';
         updateTransform();
@@ -4402,7 +4435,6 @@
         if(e.touches.length===2){ viewState.isPinching=true; viewState.pinchStartDist=getDistance(e.touches); viewState.pinchStartScale=viewState.scale; }
         else if(e.touches.length===1){ viewState.isPinching=false; handleStart(e.touches[0].clientX, e.touches[0].clientY); }
     }, {passive:false});
-    
     window.addEventListener('touchmove', (e) => {
         if(e.touches.length===2 && viewState.isPinching){
             const dist = getDistance(e.touches); const scaleChange = dist/viewState.pinchStartDist;
@@ -4410,15 +4442,13 @@
             gUniverse.style.transition='none'; updateTransform(); e.preventDefault();
         } else if(e.touches.length===1 && !viewState.isPinching) handleMove(e.touches[0].clientX, e.touches[0].clientY);
     }, {passive:false});
-    
     window.addEventListener('touchend', (e) => {
-        if(e.touches.length < 2) {
-            // ピンチ終了直後はフラグを立ててクリックを防止
+        if(e.touches.length<2) {
             if (viewState.isPinching) {
                 viewState.suppressClick = true;
                 setTimeout(() => { viewState.suppressClick = false; }, 300);
             }
-            viewState.isPinching = false;
+            viewState.isPinching=false;
         }
         setTimeout(()=>viewState.isDragging=false, 50);
     });
