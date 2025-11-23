@@ -842,37 +842,65 @@
         <p class="subtitle">Comprehensive Baseball Analytics Dictionary & Calculator</p>
     </header>
 
-    <div class="controls-area">
+    <div class="controls-area" id="main-controls">
+        <style>
+            /* スクロール時に隠すためのスタイル定義 */
+            .collapsible-actions {
+                max-height: 120px;
+                opacity: 1;
+                transform: translateY(0);
+                transition: all 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+                overflow: hidden;
+                margin-bottom: 10px;
+            }
+            /* スクロール時の状態 (.scrolled クラス付与時) */
+            body.scrolled .collapsible-actions {
+                max-height: 0;
+                opacity: 0;
+                transform: translateY(-20px);
+                margin-bottom: 0;
+            }
+            /* ヘッダー自体の微調整 */
+            .controls-area {
+                transition: padding 0.3s;
+            }
+            body.scrolled .controls-area {
+                padding-bottom: 0.5rem;
+                background: rgba(255, 255, 255, 0.85); /* 少し透過させて没入感を維持 */
+            }
+            body.dark-mode.scrolled .controls-area {
+                background: rgba(30, 41, 59, 0.85);
+            }
+        </style>
+    
         <div class="search-wrapper">
-            <!-- 修正: アイコンの挿入をJavaScriptで行うため、中身を空に -->
             <span class="search-icon" id="searchIcon"></span> 
             <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索" oninput="handleSearch()">
-            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Dark Mode">
-                <!-- 修正: 初期アイコンの挿入をJavaScriptで行うため、中身を空に -->
-            </button>
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Dark Mode"></button>
         </div>
         
-        <!-- Batch Calc Buttons -->
-        <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
-            <button class="preset-btn btn-save" onclick="openBatchCalc('bat')" style="font-size:0.9rem; padding:10px 20px;">野手一括計算</button>
-            <button class="preset-btn btn-del" onclick="openBatchCalc('pit')" style="font-size:0.9rem; padding:10px 20px; background:#f43f5e;">投手一括計算</button>
+        <div class="collapsible-actions">
+            <div style="display:flex; justify-content:center; gap:10px; margin-bottom:15px;">
+                <button class="preset-btn btn-save" onclick="openBatchCalc('bat')" style="font-size:0.9rem; padding:10px 20px;">野手一括計算</button>
+                <button class="preset-btn btn-del" onclick="openBatchCalc('pit')" style="font-size:0.9rem; padding:10px 20px; background:#f43f5e;">投手一括計算</button>
+            </div>
+    
+            <div style="display:flex; justify-content:center; margin-bottom:15px;">
+                <button class="preset-btn" onclick="openMindMap()" style="
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); 
+                    color: white; 
+                    padding: 12px 36px; 
+                    font-size: 0.95rem; 
+                    border-radius: 50px; 
+                    box-shadow: 0 0 20px rgba(124, 58, 237, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); 
+                    border: 1px solid rgba(255,255,255,0.1);
+                    display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>
+                    <span style="letter-spacing: 0.05em; font-weight:700;">GALAXY EXPLORER</span>
+                </button>
+            </div>
         </div>
-
-        <div style="display:flex; justify-content:center; margin-bottom:15px;">
-            <button class="preset-btn" onclick="openMindMap()" style="
-                background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); 
-                color: white; 
-                padding: 12px 36px; 
-                font-size: 0.95rem; 
-                border-radius: 50px; 
-                box-shadow: 0 0 20px rgba(124, 58, 237, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); 
-                border: 1px solid rgba(255,255,255,0.1);
-                display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 3v4"/><path d="M3 5h4"/><path d="M3 9h4"/></svg>
-                <span style="letter-spacing: 0.05em; font-weight:700;">GALAXY EXPLORER</span>
-            </button>
-        </div>
-        
+    
         <div class="filter-scroll">
             <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
             <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
@@ -881,6 +909,19 @@
             <div class="filter-chip" onclick="filterCategory('fld')" data-cat="fld">守備走塁</div>
             <div class="filter-chip" onclick="filterCategory('tot')" data-cat="tot">総合</div>
         </div>
+        
+        <script>
+            let lastScrollY = window.scrollY;
+            window.addEventListener('scroll', () => {
+                const currentScrollY = window.scrollY;
+                if (currentScrollY > 60) {
+                    document.body.classList.add('scrolled');
+                } else {
+                    document.body.classList.remove('scrolled');
+                }
+                lastScrollY = currentScrollY;
+            }, { passive: true });
+        </script>
     </div>
 
     <div class="grid-container" id="grid">
@@ -4007,9 +4048,11 @@
         width: 2px; height: 30px; /* Streak effect */
     }
 
-    /* --- Node Container --- */
+    /* --- Node Container (Position Fixed) --- */
     #galaxy-container {
-        position: absolute; top: 50%; left: 50%;
+        position: absolute; 
+        top: 42%; /* 変更点: 50%から42%へ。中心を上にずらして下部のボタンとの重なりを回避 */
+        left: 50%;
         width: 0; height: 0;
         transform-style: preserve-3d;
         transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
