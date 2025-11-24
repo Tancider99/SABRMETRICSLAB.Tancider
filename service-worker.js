@@ -1,12 +1,11 @@
-const CACHE_NAME = 'sabr-lab-v1';
+const CACHE_NAME = 'sabr-lab-v2'; // バージョンをv2に更新
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './Copilot_20251122_185005.png',
-  'https://cdn.jsdelivr.net/npm/chart.js' // グラフ描画用ライブラリ
+  './Copilot_20251122_185005.png'
+  // 'https://cdn.jsdelivr.net/npm/chart.js' // CDNリソースはキャッシュリストから除外
 ];
 
-// インストール時にキャッシュ
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
@@ -14,7 +13,18 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// リクエスト時にキャッシュがあればそれを返す
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        // 新しいキャッシュ名以外の全てのキャッシュを削除
+        cacheNames.filter((cacheName) => cacheName !== CACHE_NAME)
+                  .map((cacheName) => caches.delete(cacheName))
+      );
+    })
+  );
+});
+
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
