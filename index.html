@@ -837,11 +837,42 @@
         };
     </script>
     
-    <header>
-        <h1 class="brand">SABR<span>METRICS</span> LAB</h1>
-        <p class="subtitle">Comprehensive Baseball Analytics Dictionary & Calculator</p>
+    <header style="padding: 2rem 2rem 1rem;">
+        <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:20px; margin-bottom:20px;">
+            <div>
+                <h1 class="brand" style="font-size:2.5rem; margin-bottom:5px;">SABR<span>METRICS</span> LAB</h1>
+                <p class="subtitle" style="margin:0;">Ultimate Baseball Analytics Dictionary</p>
+            </div>
+            
+            <div style="display:flex; gap:10px;">
+                <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Dark Mode"></button>
+                
+                <button class="theme-toggle" onclick="openToolMenu()" style="
+                    width:auto; padding:0 24px; font-weight:800; letter-spacing:0.05em;
+                    background:var(--c-text-primary); color:var(--c-bg); border:none;
+                    display:flex; align-items:center; gap:8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                ">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                    TOOLS
+                </button>
+            </div>
+        </div>
+    
+        <div class="search-wrapper" style="padding:0; margin-bottom:15px;">
+            <span class="search-icon" id="searchIcon"></span> 
+            <input type="text" class="search-input" id="searchInput" placeholder="指標名、意味、計算式で検索" oninput="handleSearch()">
+        </div>
+        
+        <div class="filter-scroll" style="padding:0; justify-content:flex-start;">
+            <div class="filter-chip active" onclick="filterCategory('all')" data-cat="all">ALL</div>
+            <div class="filter-chip" onclick="filterCategory('std')" data-cat="std">基本</div>
+            <div class="filter-chip" onclick="filterCategory('bat')" data-cat="bat">打撃</div>
+            <div class="filter-chip" onclick="filterCategory('pit')" data-cat="pit">投球</div>
+            <div class="filter-chip" onclick="filterCategory('fld')" data-cat="fld">守備走塁</div>
+            <div class="filter-chip" onclick="filterCategory('tot')" data-cat="tot">総合</div>
+        </div>
     </header>
-
+    
     <div class="controls-area" id="main-controls">
         <style>
             /* スクロール時に隠すためのスタイル定義 */
@@ -899,6 +930,22 @@
                     <span style="letter-spacing: 0.05em; font-weight:700;">GALAXY EXPLORER</span>
                 </button>
             </div>
+
+            <div style="display:flex; justify-content:center; margin-bottom:15px; margin-top:10px;">
+                <button class="preset-btn" onclick="openCareerSim()" style="
+                    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+                    color: white; 
+                    padding: 12px 36px; 
+                    font-size: 0.95rem; 
+                    border-radius: 50px; 
+                    box-shadow: 0 0 20px rgba(217, 119, 6, 0.4), inset 0 1px 0 rgba(255,255,255,0.2); 
+                    border: 1px solid rgba(255,255,255,0.1);
+                    display: flex; align-items: center; gap: 10px; transition: all 0.3s ease;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span style="letter-spacing: 0.05em; font-weight:700;">MY PLAYER CAREER</span>
+                </button>
+            </div>
+            
         </div>
     
         <div class="filter-scroll">
@@ -4511,6 +4558,276 @@
         }
     }
 </script>
+
+/* --- Career Simulation Logic --- */
+
+function openCareerSim() {
+    const title = "MY PLAYER CAREER - 選手人生シミュレーション";
+    const catColor = "#d97706"; // Amber
+
+    // パラメータ入力UI
+    const createSlider = (id, label, min, max, val, desc) => `
+        <div class="calc-group" style="margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+                <label class="calc-label" style="font-size:0.9rem;">${label}</label>
+                <span id="val-${id}" style="font-weight:bold; color:${catColor};">${val}</span>
+            </div>
+            <input type="range" id="sim-${id}" min="${min}" max="${max}" value="${val}" class="calc-field" style="width:100%; cursor:pointer;" oninput="document.getElementById('val-${id}').innerText = this.value">
+            <div style="font-size:0.75rem; color:var(--c-text-secondary);">${desc}</div>
+        </div>
+    `;
+
+    const html = `
+        <div class="section-label has-hash" style="color:${catColor};">CHARACTER CREATION / 選手作成</div>
+        <div class="calc-container" style="border-color:${catColor}; padding:30px;">
+            
+            <div class="calc-group" style="margin-bottom:20px;">
+                <label class="calc-label">選手名</label>
+                <input type="text" id="sim-name" class="calc-field" placeholder="例: 山田 太郎" style="text-align:left;">
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                ${createSlider('contact', 'ミート (Contact)', 1, 100, 50, '打率・三振率に影響')}
+                ${createSlider('power', 'パワー (Power)', 1, 100, 50, '本塁打・長打に影響')}
+                ${createSlider('speed', '走力 (Speed)', 1, 100, 50, '盗塁・三塁打・守備範囲に影響')}
+                ${createSlider('eye', '選球眼 (Eye)', 1, 100, 50, '四球率に影響')}
+                ${createSlider('defense', '守備力 (Defense)', 1, 100, 50, 'UZR・ポジション適性に影響')}
+            </div>
+
+            <div class="calc-group" style="margin-top:20px;">
+                <label class="calc-label">ポジション</label>
+                <select id="sim-pos" class="calc-select" style="width:100%;">
+                    <option value="cf">センター (中堅手)</option>
+                    <option value="ss">ショート (遊撃手)</option>
+                    <option value="2b">セカンド (二塁手)</option>
+                    <option value="3b">サード (三塁手)</option>
+                    <option value="1b">ファースト (一塁手)</option>
+                    <option value="rf">ライト (右翼手)</option>
+                    <option value="lf">レフト (左翼手)</option>
+                    <option value="c">キャッチャー (捕手)</option>
+                    <option value="dh">DH (指名打者)</option>
+                </select>
+            </div>
+
+            <button class="calc-btn" style="background:${catColor}; margin-top:30px;" onclick="runCareerSim()">
+                ${icons.sparkle} キャリアシミュレーション開始
+            </button>
+        </div>
+        <div id="sim-results-area" style="margin-top:30px;"></div>
+    `;
+
+    modalTitleArea.innerHTML = `
+        <div class="m-cat" style="color:${catColor}">SIMULATION GAME</div>
+        <h2 class="m-title">${title}</h2>
+        <div class="m-full">初期能力を設定して、プロ野球人生をシミュレーションしよう</div>
+    `;
+    modalBodyContent.innerHTML = html;
+
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => {
+        modal.classList.add('show');
+    });
+}
+
+window.runCareerSim = function() {
+    const name = document.getElementById('sim-name').value || "名無し選手";
+    const pos = document.getElementById('sim-pos').value;
+    
+    // 初期能力値の取得
+    let stats = {
+        contact: parseInt(document.getElementById('sim-contact').value),
+        power: parseInt(document.getElementById('sim-power').value),
+        speed: parseInt(document.getElementById('sim-speed').value),
+        eye: parseInt(document.getElementById('sim-eye').value),
+        defense: parseInt(document.getElementById('sim-defense').value)
+    };
+
+    let age = 18; // 高卒新人
+    let careerStats = { g:0, pa:0, ab:0, h:0, hr:0, rbi:0, sb:0, bb:0, so:0, war:0 };
+    let historyHtml = "";
+    let peakStats = null;
+    let peakWar = -999;
+    let year = 1;
+    let active = true;
+
+    // シミュレーションループ (最大25年)
+    while (active && year <= 25) {
+        // --- 1. エイジングカーブ (成長と衰え) ---
+        // 18-24: 成長期, 25-29: 全盛期, 30-: 衰退期
+        let growth = 0;
+        if (age < 24) growth = Math.random() * 3 + 1; // +1~4
+        else if (age < 29) growth = Math.random() * 2 - 0.5; // -0.5~1.5
+        else if (age < 32) growth = Math.random() * 1 - 2; // -2~-1
+        else growth = Math.random() * 2 - 4; // -4~-2 (急激な衰え)
+
+        // ランダムな「覚醒」または「怪我」イベント
+        if (Math.random() < 0.05 && age < 26) { growth += 10; alertLog = "覚醒！能力が大幅アップ！"; }
+        if (Math.random() < 0.05 && age > 25) { growth -= 5; alertLog = "怪我の影響で能力ダウン..."; }
+
+        // 能力更新
+        ['contact', 'power', 'speed', 'eye', 'defense'].forEach(k => {
+            stats[k] = Math.max(1, Math.min(100, stats[k] + growth + (Math.random()*2-1)));
+        });
+
+        // --- 2. 成績生成ロジック ---
+        // 出場試合数 (能力が低いとレギュラーになれない)
+        const abilityAvg = (stats.contact + stats.power + stats.defense)/3;
+        let games = 0;
+        if (abilityAvg < 30) games = Math.floor(Math.random() * 10); // 2軍
+        else if (abilityAvg < 50) games = Math.floor(Math.random() * 80 + 20); // 控え
+        else games = Math.floor(Math.random() * 20 + 123); // レギュラー (123-143試合)
+
+        if (games < 10) { // 引退判定
+            if (age > 25) active = false; // 25歳過ぎて2軍なら引退
+        }
+
+        if (active) {
+            const pa = Math.floor(games * (3.5 + Math.random())); // 打席数
+            const ab = Math.floor(pa * (0.85 + Math.random() * 0.05)); // 打数
+
+            // 各スタッツの計算 (100分率の能力値を実際の率に変換)
+            // 打率: Contact 50 -> .260, 100 -> .360
+            const avgRate = 0.180 + (stats.contact * 0.0018) + (Math.random() * 0.04 - 0.02);
+            let h = Math.floor(ab * avgRate);
+
+            // 本塁打: Power 50 -> 15本, 100 -> 50本
+            const hrRate = (stats.power * 0.0006) + (Math.random() * 0.01 - 0.005);
+            let hr = Math.max(0, Math.floor(pa * hrRate));
+            
+            // 三振: ContactとEyeが低いほど多い
+            const soRate = 0.35 - (stats.contact * 0.0015) - (stats.eye * 0.001);
+            let so = Math.max(0, Math.floor(pa * soRate));
+
+            // 四球: Eyeが高いほど多い
+            const bbRate = 0.03 + (stats.eye * 0.0015);
+            let bb = Math.max(0, Math.floor(pa * bbRate));
+
+            // 盗塁: Speedが高いほど多い
+            const sbRate = (stats.speed > 60) ? (stats.speed - 60) * 0.01 : 0;
+            let sb = Math.max(0, Math.floor(games * sbRate * Math.random()));
+
+            // 二塁打・三塁打 (SpeedとPower依存)
+            let d = Math.floor(h * (0.15 + stats.power*0.001));
+            let t = Math.floor(h * (stats.speed*0.0005));
+            let s = h - d - t - hr; // 単打
+            
+            // 整合性チェック
+            if (s < 0) { s=0; h = d+t+hr; }
+            if (h > ab) h = ab;
+
+            // 簡易WAR計算 (既存の計算ロジックを流用したいが、ここでは簡易版で高速化)
+            // WAR ≈ (wOBA - lgwOBA)/1.2 * PA / 10 + Pos + UZR
+            // 簡易的に OPS と 守備走塁 から算出
+            const obp = (h+bb)/pa;
+            const slg = (s + d*2 + t*3 + hr*4)/ab;
+            const ops = obp + slg;
+            const uzrEst = (stats.defense - 50) / 2; // 50を0として±25
+            const posAdj = {'c':18, 'ss':10, '2b':3, 'cf':4, '3b':-4, 'rf':-5, 'lf':-12, '1b':-14, 'dh':-15}[pos] || 0;
+            const war = ((ops - 0.700) * 50 * (pa/600)) + ((uzrEst + posAdj)/10 * (pa/600));
+
+            // キャリア加算
+            careerStats.g += games; careerStats.pa += pa; careerStats.ab += ab;
+            careerStats.h += h; careerStats.hr += hr; careerStats.sb += sb;
+            careerStats.bb += bb; careerStats.so += so; careerStats.war += war;
+
+            // 全盛期チェック
+            if (war > peakWar) {
+                peakWar = war;
+                peakStats = { 
+                    name: `${name} (${age}歳時)`, 
+                    pa, ab, h, d, t, hr, bb, hbp:0, sf:0, sh:0, so, sb, cs: Math.floor(sb/3), 
+                    stadium:'avg', pos: pos, def: uzrEst.toFixed(1)
+                };
+            }
+
+            // 行追加
+            const rowStyle = (war >= 5) ? "background:#fef3c7; font-weight:bold;" : (war >= 2 ? "background:#f0fdf4;" : "");
+            historyHtml += `
+                <tr style="${rowStyle}">
+                    <td>${age}歳</td>
+                    <td>${games}</td>
+                    <td>. ${(h/ab).toFixed(3).substring(1)}</td>
+                    <td>${hr}</td>
+                    <td>${(h + bb + (h-d-t-hr) + d*2 + t*3 + hr*4).toFixed(0) /*RBI簡易*/}</td>
+                    <td>${sb}</td>
+                    <td>. ${(ops).toFixed(3).substring(1)}</td>
+                    <td>${war.toFixed(1)}</td>
+                </tr>
+            `;
+
+            age++;
+            year++;
+            
+            // 能力低下による引退判定
+            if (abilityAvg < 30) active = false;
+        }
+    }
+
+    // --- 結果表示 ---
+    const totalAvg = careerStats.ab > 0 ? (careerStats.h / careerStats.ab).toFixed(3) : ".---";
+    const hallOfFame = (careerStats.h > 2000 || careerStats.hr > 200 || careerStats.war > 50) ? '👑 殿堂入り確実！' : 'お疲れ様でした。';
+
+    // ピーク時データをプリセットに保存する準備
+    window.tempPeakStats = peakStats; // グローバルに一時保存
+
+    const resultHtml = `
+        <div class="section-label has-hash" style="color:#d97706;">CAREER RESULT / 通算成績</div>
+        <div class="calc-container" style="border-color:#d97706;">
+            <div style="text-align:center; margin-bottom:20px;">
+                <h3 style="margin:0; font-size:1.5rem;">${name}</h3>
+                <div style="color:var(--c-text-secondary);">${pos.toUpperCase()} / プロ生活 ${year-1}年</div>
+                <div style="font-size:1.2rem; font-weight:bold; color:#d97706; margin-top:10px;">${hallOfFame}</div>
+            </div>
+            
+            <table class="criteria-table" style="text-align:center;">
+                <tr><th>打率</th><th>安打</th><th>本塁打</th><th>打点(推定)</th><th>盗塁</th><th>WAR</th></tr>
+                <tr style="font-size:1.2rem; font-weight:bold;">
+                    <td>${totalAvg}</td>
+                    <td>${careerStats.h}</td>
+                    <td>${careerStats.hr}</td>
+                    <td>${(careerStats.h*0.4 + careerStats.hr*1.5).toFixed(0)/*簡易*/}</td>
+                    <td>${careerStats.sb}</td>
+                    <td>${careerStats.war.toFixed(1)}</td>
+                </tr>
+            </table>
+
+            <div style="margin-top:20px; text-align:center;">
+                <button class="calc-btn" onclick="savePeakStats()" style="background:#0ea5e9;">
+                    ${icons.save} 全盛期の成績(${peakStats ? peakStats.name.split(' ')[1] : ''})をプリセット保存
+                </button>
+                <div style="font-size:0.8rem; color:var(--c-text-secondary); margin-top:5px;">保存すると「計算機」や「GMチャレンジ」で使用できます</div>
+            </div>
+        </div>
+
+        <div style="max-height:300px; overflow-y:auto; margin-top:20px; border:1px solid var(--c-border); border-radius:12px;">
+            <table class="criteria-table" style="font-size:0.85rem; text-align:center;">
+                <thead style="position:sticky; top:0; background:var(--c-bg);">
+                    <tr><th>年齢</th><th>試合</th><th>率</th><th>本</th><th>点</th><th>盗</th><th>OPS</th><th>WAR</th></tr>
+                </thead>
+                <tbody>
+                    ${historyHtml}
+                </tbody>
+            </table>
+        </div>
+    `;
+
+    document.getElementById('sim-results-area').innerHTML = resultHtml;
+}
+
+window.savePeakStats = function() {
+    if (!window.tempPeakStats) return;
+    const name = window.tempPeakStats.name;
+    const presets = getPresets();
+    
+    if (presets[name] && !confirm(`"${name}" は既に存在します。上書きしますか？`)) return;
+    
+    presets[name] = window.tempPeakStats;
+    savePresets(presets);
+    alert(`"${name}" をプリセットに保存しました！\nWAR計算機などで読み込んで分析できます。`);
+    
+    // プリセットリスト更新
+    updatePresetList();
+}
 
 </body>
 </html>
