@@ -4208,8 +4208,8 @@
         });
     }
 
-    /* --- New Career Simulation Logic (v3.1 Fixed K-Rate & Name) --- */
-    
+    // --- Career Mode Logic (Fixed & Consolidated) ---
+
     let careerMode = 'batter'; // 'batter' or 'pitcher'
     
     function openCareerSim() {
@@ -4255,6 +4255,23 @@
                 'F': '#64748b', 'G': '#94a3b8'
             };
             fillEl.style.background = colorMap[r.rank];
+        }
+    }
+
+    // 【追加】ケガしやすさ表示更新用関数（HTML内のoninputを簡素化するため）
+    function updateInjuryDisplay(val) {
+        const v = parseInt(val);
+        let t = '普通';
+        let c = '#0f172a';
+        if(v < 20) { t = '鉄人'; c = '#10b981'; }
+        else if(v < 40) { t = '頑丈'; c = '#16a34a'; }
+        else if(v > 60) { t = 'ケガ持ち'; c = '#f97316'; }
+        else if(v > 80) { t = 'スペランカー'; c = '#ef4444'; }
+        
+        const el = document.getElementById('val-injury');
+        if(el) {
+            el.innerText = t + '(' + v + ')';
+            el.style.color = c;
         }
     }
     
@@ -4358,18 +4375,7 @@
                             <span class="c-slider-val" id="val-injury" style="color:#0f172a;">普通(50)</span>
                         </div>
                         <input type="range" id="sim-injury" min="0" max="100" value="50" class="c-slider" style="width:100%; accent-color:#ef4444;"
-                            oninput="
-                                const v = parseInt(this.value);
-                                let t = '普通';
-                                let c = '#0f172a';
-                                if(v < 20) { t = '鉄人'; c = '#10b981'; }
-                                else if(v < 40) { t = '頑丈'; c = '#16a34a'; }
-                                else if(v > 60) { t = 'ケガ持ち'; c = '#f97316'; }
-                                else if(v > 80) { t = 'スペランカー'; c = '#ef4444'; }
-                                const el = document.getElementById('val-injury');
-                                el.innerText = t + '(' + v + ')';
-                                el.style.color = c;
-                            ">
+                            oninput="updateInjuryDisplay(this.value)">
                         <div style="font-size:0.75rem; color:#94a3b8; margin-top:5px; display:flex; justify-content:space-between;">
                             <span>鉄人(0)</span><span>普通(50)</span><span>ガラス(100)</span>
                         </div>
@@ -4410,24 +4416,20 @@
         }
     }
     
-    // --- Career Simulation Logic (Play-by-Play Edition) ---
+    // --- Career Simulation Logic (Full & Consolidated) ---
     function runCareerSim() {
-        // 名前が空なら「名無し選手」を設定
         let rawName = document.getElementById('sim-name').value;
         const name = rawName.trim() === "" ? "名無し選手" : rawName;
         
         const startAge = parseInt(document.getElementById('sim-age').value);
-        // 【追加】ケガしやすさを取得
         const injuryProne = parseInt(document.getElementById('sim-injury').value);
         
         const pos = document.getElementById('sim-pos').value;
         const isBat = careerMode === 'batter';
 
-        // --- 1. リーグ平均データと定数の準備 (サイトのロジックと統一) ---
+        // リーグ定数
         const lgData = {};
-        ADVANCED_LEAGUE_INPUTS.forEach(inp => {
-            lgData[inp.id] = inp.default;
-        });
+        ADVANCED_LEAGUE_INPUTS.forEach(inp => { lgData[inp.id] = inp.default; });
         const C = calcDerived(lgData); 
     
         let stats = {};
@@ -4450,9 +4452,8 @@
     
         let peakWar = -999;
     
-        // --- シミュレーションループ ---
         while (active && age < 46) {
-            // 1. 能力の成長・衰退 (年齢曲線)
+            // 成長・衰退
             let growth = 0;
             if (age < 23) growth = Math.random() * 3 + 2; 
             else if (age < 27) growth = Math.random() * 2; 
@@ -4460,21 +4461,15 @@
             else if (age < 35) growth = -Math.random() * 2 - 1; 
             else growth = -Math.random() * 4 - 2; 
     
-            // 【変更】怪我イベントの確率をユーザー入力(injuryProne)に基づいて決定
-            // 0(鉄人):1% 〜 100(スペ):15% 程度に変動
+            // 怪我ロジック
             let injuryChance = 0.01 + (injuryProne / 100) * 0.14; 
-            
-            // ランダム要素
             if(Math.random() < injuryChance) {
-                // 怪我発生：能力大幅ダウン
                 growth -= (10 + Math.random() * 10); 
-                // 怪我持ち度が高いと、怪我即引退のリスクも高まる
                 if (injuryProne > 70 && Math.random() < 0.3) {
-                     // 強制引退フラグはループ最後で判定
-                     growth -= 20; 
+                     growth -= 20; // 致命的怪我
                 }
             }
-            if(Math.random() < 0.05) growth += 5;  // 覚醒
+            if(Math.random() < 0.05) growth += 5;
 
             if (isBat) {
                 Object.keys(stats).forEach(k => {
@@ -4503,15 +4498,13 @@
                 : { g:0, ip_outs:0, bf:0, w:0, l:0, sv:0, hld:0, h:0, hr:0, bb:0, hbp:0, so:0, r:0, er:0 };
 
             let maxGames = 143;
-            // 怪我しやすさが高いと、能力が高くても出場試合数が減るリスクを入れる
             let healthFactor = 1.0;
             if (injuryProne > 50 && Math.random() < (injuryProne/200)) {
-                healthFactor = 0.5 + Math.random()*0.4; // 怪我で長期離脱
+                healthFactor = 0.5 + Math.random()*0.4;
             }
 
             let playChance = Math.min(1.0, Math.max(0, (abilityScore - 35) / 20)); 
             
-            // --- 試合シミュレーション ---
             if (playChance > 0) {
                 if (isBat) {
                     let actualMaxGames = Math.floor(maxGames * healthFactor);
@@ -4532,7 +4525,7 @@
                             else if (outcome === '1B') { s.ab++; s.h++; }
                             else if (outcome === '2B') { s.ab++; s.h++; s.2b++; }
                             else if (outcome === '3B') { s.ab++; s.h++; s.3b++; }
-                            else { s.ab++; } // Out
+                            else { s.ab++; } 
 
                             if (['1B', 'BB', 'HBP'].includes(outcome)) {
                                 if (stats.speed > 50 && Math.random() < ((stats.speed-40)*0.005)) {
@@ -4567,7 +4560,7 @@
                 }
             }
 
-            // --- WAR計算 (サイトロジック準拠) ---
+            // WAR計算
             let war = 0;
             let displayStats = {};
 
@@ -4647,22 +4640,17 @@
                 }
             }
 
-            // 引退判定
             age++;
             if (age >= 45) active = false;
-            // 衰えて成績が出なくなったら引退
             if (age > 30 && war < -0.5 && Math.random() < 0.3) active = false; 
-            // 虚弱体質(injuryProne高)で能力が下がりきったら早期引退
             if (injuryProne > 80 && abilityScore < 30 && age > 25) active = false;
         }
 
         renderResult(name, pos, history, career, isBat);
     }
 
-    // --- 補助関数: 打席シミュレーション (BABIP修正) ---
+    // --- 打席シミュレーション関数 ---
     function simulateBattingPA(st) {
-        // BB%: 8%, K%: 20%, HR%: 3% ...
-        
         let pBB = 0.08 + (st.contact - 50) * 0.0015; 
         if (pBB < 0.02) pBB = 0.02;
 
@@ -4670,17 +4658,15 @@
         if (pSO < 0.05) pSO = 0.05;
 
         let roll = Math.random();
-
         if (roll < pBB) return 'BB';
         if (roll < pBB + 0.01) return 'HBP';
         if (roll < pBB + 0.01 + pSO) return 'SO';
 
-        // インプレー (BIP)
+        // インプレー
         let pHR_BIP = 0.03 + (st.power - 50) * 0.002;
         if (pHR_BIP < 0) pHR_BIP = 0;
         
-        // 【修正】BABIP計算式からパワーのマイナス補正を削除
-        // スピード(内野安打)とコンタクト(ライナー性)でBABIPが上がる
+        // BABIP (パワーによるマイナス補正を削除)
         let babip = 0.300 + (st.speed - 50) * 0.0015 + (st.contact - 50) * 0.001;
         
         let rollBIP = Math.random();
@@ -4695,8 +4681,66 @@
             if (rollHit < p3B + p2B) return '2B';
             return '1B';
         }
-
         return 'OUT';
+    }
+
+    // --- 【追加】登板シミュレーション関数（前回不足していたもの） ---
+    function simulatePitchingGame(s, st, isStarter) {
+        s.g++;
+        let maxPitches = isStarter ? (80 + st.stamina * 0.5) : (15 + st.stamina * 0.2);
+        let pitches = 0;
+        let inningOuts = 0;
+        let gameRuns = 0;
+
+        while (pitches < maxPitches && gameRuns < 8) { 
+            s.bf++;
+            s.bf_latest = (s.bf_latest || 0) + 1; 
+            pitches += (3 + Math.random() * 3); 
+
+            let pBB = 0.08 - (st.control - 50) * 0.002;
+            if (pBB < 0.02) pBB = 0.02;
+            
+            let pSO = 0.18 + (st.velocity - 140) * 0.004 + (st.breaking - 50) * 0.002;
+            
+            let roll = Math.random();
+            if (roll < pBB) {
+                s.bb++;
+            } else if (roll < pBB + 0.005) {
+                s.hbp++;
+            } else if (roll < pBB + 0.005 + pSO) {
+                s.so++; s.ip_outs++; inningOuts++;
+            } else {
+                let pHR = 0.03 - (st.control - 50) * 0.0005 - (st.velocity - 140) * 0.0005;
+                if (pHR < 0.005) pHR = 0.005;
+
+                let babip = 0.300 - (st.breaking - 50) * 0.001 - (st.velocity - 140) * 0.001;
+
+                let rollBIP = Math.random();
+                if (rollBIP < pHR) {
+                    s.h++; s.hr++; s.r++; s.er++; gameRuns++;
+                } else if (Math.random() < babip) {
+                    s.h++;
+                    if (Math.random() < 0.3) { s.r++; s.er++; gameRuns++; } 
+                } else {
+                    s.ip_outs++; inningOuts++;
+                }
+            }
+            if (!isStarter && inningOuts >= 3) break; 
+        }
+
+        if (isStarter) {
+            if (gameRuns <= 2 && inningOuts >= 15) { 
+                if (Math.random() < 0.6) s.w++; else if (Math.random() < 0.2) s.l++;
+            } else if (gameRuns >= 4) {
+                s.l++;
+            }
+        } else {
+            if (gameRuns === 0) {
+                 if (st.velocity > 150) s.sv++; else s.hld++; 
+            } else {
+                if (Math.random() < 0.3) s.l++;
+            }
+        }
     }
 
     // Initial Render
