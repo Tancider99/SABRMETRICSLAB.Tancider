@@ -1010,7 +1010,7 @@
         </div>
     </header>
 
-    <div style="max-width: 1200px; margin: 10 auto; padding: 0 2rem 20px;">
+    <div style="max-width: 1200px; margin: auto auto; padding: 0 2rem 20px;">
         <details class="footer-details" style="border-color: var(--cat-bat); background: var(--bg-bat); margin-bottom: 20px;">
             <summary class="footer-summary" style="font-weight:800; color:var(--cat-bat);">
                 <span class="footer-icon">⚠️</span> 
@@ -4884,12 +4884,7 @@
     .g-btn.close { color: #f43f5e; }
     @media (max-width: 768px) {
         .galaxy-controls {
-            /* 従来のbottom/left/transformを解除し、top/rightに設定 */
-            top: 20px;
-            bottom: auto; 
-            right: 20px;
-            left: auto;
-            transform: none;
+            /* 位置指定を削除してPC版(中央下)の設定を継承させる */
             
             /* モバイル向けにパディングと丸みを調整 */
             padding: 4px 8px;
