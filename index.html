@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SABR METRICS LAB | Ultimate Calculator Edition</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#ffffff">
     <link rel="icon" href="Copilot_20251122_185005.png" type="image/png">
     <link rel="apple-touch-icon" href="Copilot_20251122_185005.png">
     <!-- Chart.js for Radar Chart -->
@@ -5166,6 +5168,16 @@
             stars.forEach(s => { ctx.globalAlpha = s.a; ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI*2); ctx.fill(); });
         }
     }
+</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js')
+        .then(reg => console.log('Service Worker Registered!', reg))
+        .catch(err => console.log('Service Worker Registration Failed:', err));
+    });
+  }
 </script>
 
 </body>
