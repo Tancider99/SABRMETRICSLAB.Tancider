@@ -6,6 +6,7 @@ const CACHE_NAME = 'sabr-lab-v4-emergency';
 const ASSETS = [
   './Copilot_20251122_185005.png'
   // HTMLファイルはあえてキャッシュリストから外します
+  './manifest.json'
 ];
 
 // インストール処理
