@@ -24,7 +24,6 @@ const TEAM_PF = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // データが読み込まれていれば初期化
     if (typeof NPB_STATS_DATA !== 'undefined') {
         initStatsBoard();
     } else {
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// タブ切り替え機能
 function switchView(viewName) {
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
@@ -72,18 +70,20 @@ function calculateAdvancedStats() {
         const pa = p['打席'] || 0;
         const h = p['安打'] || 0;
         const bb = p['四球'] || 0;
+        const ibb = p['申告敬遠'] || 0; // 申告敬遠を取得
         const hbp = p['死球'] || 0;
         const sf = p['犠飛'] || 0;
         const sh = p['犠打'] || 0;
         const hr = p['本塁打'] || 0;
         
-        // 打数 = 打席 - (四球+死球+犠打+犠飛) ※妨害等は無視
+        // 打数計算
         const ab = pa - (bb + hbp + sh + sf);
 
         acc.PA += pa;
         acc.AB += ab;
         acc.H += h;
         acc.BB += bb;
+        acc.IBB += ibb; // 合計に加算
         acc.HBP += hbp;
         acc.SF += sf;
         acc.HR += hr;
@@ -92,38 +92,38 @@ function calculateAdvancedStats() {
         acc._3B += (p['三塁打'] || 0);
         
         return acc;
-    }, { PA:0, AB:0, H:0, BB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0 });
+    }, { PA:0, AB:0, H:0, BB:0, IBB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0 });
 
     // --- リーグ定数の計算 ---
-    // wOBA Scale (一般的な値を使用)
     const woba_scale = 1.24;
     
-    // リーグ平均 wOBA (Weightsは data.js の定義に合わせて精密化)
-    // BB:0.692, HBP:0.73, 1B:0.865, 2B:1.334, 3B:1.725, HR:2.065
+    // wOBA計算 (IBBを除く)
+    // 分母: AB + BB - IBB + SF + HBP
     const single = total.H - total._2B - total._3B - total.HR;
-    
+    const ubb = total.BB - total.IBB; // 意図しない四球
+
     const woba_numerator = 
-        (0.692 * total.BB) + 
+        (0.692 * ubb) + 
         (0.73  * total.HBP) + 
         (0.865 * single) + 
         (1.334 * total._2B) + 
         (1.725 * total._3B) + 
         (2.065 * total.HR);
         
-    const woba_denominator = total.AB + total.BB + total.SF + total.HBP;
+    const woba_denominator = total.AB + total.BB - total.IBB + total.SF + total.HBP;
     
     const lg_woba = woba_denominator > 0 ? woba_numerator / woba_denominator : 0.320;
-    
-    // リーグ平均 R/PA (得点期待値)
-    const lg_r_pa = 0.12; 
+    const lg_r_pa = 0.12; // リーグ平均得点/打席 (概算)
 
     console.log(`League Constants: wOBA=${lg_woba.toFixed(3)}, R/PA=${lg_r_pa}`);
 
     // --- 各選手の指標計算 ---
     currentStatsData = NPB_STATS_DATA.map(p => {
+        // 基本スタッツ
         const pa = p['打席'] || 0;
         const h = p['安打'] || 0;
         const bb = p['四球'] || 0;
+        const ibb = p['申告敬遠'] || 0;
         const hbp = p['死球'] || 0;
         const sf = p['犠飛'] || 0;
         const sh = p['犠打'] || 0;
@@ -132,58 +132,68 @@ function calculateAdvancedStats() {
         const _3b = p['三塁打'] || 0;
         const so = p['三振'] || 0;
         
+        const go_out = p['ゴロ'] || 0;
+        const fo_out = (p['外野フライ'] || 0) + (p['内野フライ'] || 0); // フライアウト(内野含む)
+        const lo_out = p['ライナー'] || 0;
+        
+        const e_inf = p['内野手捕手エラー'] || 0;
+        const e_out = p['外野手エラー'] || 0;
+        const fc_inf = p['内野手捕手野選'] || 0;
+        
         const ab = pa - (bb + hbp + sh + sf);
         const single = h - _2b - _3b - hr;
-        
-        // wOBA (係数を統一)
-        const w_num = (0.692 * bb) + (0.73 * hbp) + (0.865 * single) + (1.334 * _2b) + (1.725 * _3b) + (2.065 * hr);
-        const w_den = ab + bb + sf + hbp;
+        const ubb = bb - ibb;
+
+        // --- wOBA & wRC+ (厳密計算) ---
+        const w_den = ab + bb - ibb + sf + hbp;
+        const w_num = (0.692 * ubb) + (0.73 * hbp) + (0.865 * single) + (1.334 * _2b) + (1.725 * _3b) + (2.065 * hr);
         const woba = w_den > 0 ? w_num / w_den : 0;
 
-        // wRAA = ((wOBA - lg_wOBA) / wOBA_Scale) * PA
         const wraa = woba_scale > 0 ? ((woba - lg_woba) / woba_scale) * pa : 0;
 
-        // --- Park Factor 補正 ---
         const pf = TEAM_PF[p.Team] || 1.00;
+        // 簡易PF補正: 本拠地50% + 他球場平均(1.0)50% と仮定してマイルドに補正
+        // ※厳密にはリーグ全日程のPF加重平均だが、ここでは簡易式を採用
+        const pf_coef = (0.5 * pf) + 0.5; 
         
-        // PF補正係数 = (0.5 * PF) + (0.5 * (6 - PF) / 5)
-        // ※本拠地50%・他球場平均(リーグ6球団)を想定した補正
-        const home_ratio = 0.5;
-        const pf_coef = (home_ratio * pf) + ((1 - home_ratio) * (6 - pf) / 5);
+        // wRC+ = ( (wRAA/PA + lg_R_PA) + (lg_R_PA - PF*lg_R_PA) ) / lg_R_PA * 100
+        // PF補正項: (1 - PF) * lg_R_PA (打者有利PF>1ならマイナス、不利PF<1ならプラス)
+        const park_adj_runs_per_pa = (1 - pf_coef) * lg_r_pa;
         
-        // Park Adjustment (得点単位)
-        // 球場補正値 = (1 - 補正係数) * リーグR/PA * 打席数
-        // 打者有利な球場(PF>1)ならマイナス、不利な球場(PF<1)ならプラスの補正がかかる
-        const parkAdj = (1 - pf_coef) * lg_r_pa * pa;
-
-        // wRC+ = (((wRAA + ParkAdj) / PA + lg_R/PA) / lg_R/PA) * 100
         let wrc_plus = 0;
         if (pa > 0 && lg_r_pa > 0) {
-            wrc_plus = (((wraa + parkAdj) / pa) + lg_r_pa) / lg_r_pa * 100;
+            wrc_plus = (((wraa / pa) + lg_r_pa + park_adj_runs_per_pa) / lg_r_pa) * 100;
         }
 
-        const true_tb = h + _2b + (2*_3b) + (3*hr);
+        // --- 新指標 (GB%, FB%, LD%) ---
+        // GB％ =（ゴロアウト + 0.5*単打 + 0.1*二塁打 + 0.8*内野エラー + 0.9*内野野選）/ 打数
+        const gb_pct = ab > 0 ? (go_out + 0.5*single + 0.1*_2b + 0.8*e_inf + 0.9*fc_inf) / ab : 0;
+
+        // FB％ =（フライアウト + 0.3*単打 + 0.8*二塁打 + 外野エラー）/ 打数
+        const fb_pct = ab > 0 ? (fo_out + 0.3*single + 0.8*_2b + e_out) / ab : 0;
+
+        // LD％ =（ライナーアウト + 0.2*単打 + 0.1*二塁打 + 0.2*内野エラー + 0.1*内野野選）/ 打数
+        const ld_pct = ab > 0 ? (lo_out + 0.2*single + 0.1*_2b + 0.2*e_inf + 0.1*fc_inf) / ab : 0;
+
+        // その他の指標
         const avg = ab > 0 ? h / ab : 0;
+        const true_tb = h + _2b + (2*_3b) + (3*hr);
         const slg = ab > 0 ? true_tb / ab : 0;
-        const obp = pa > 0 ? (h + bb + hbp) / pa : 0;
-        const ops = obp + slg;
         const iso = slg - avg;
         const bb_k = so > 0 ? bb / so : 0;
 
         return {
             ...p,
-            AB: ab,
             H: h,
             HR: hr,
             PA_CALC: pa,
             wOBA: woba,
             wRC_PLUS: wrc_plus,
-            AVG: avg,
-            OBP: obp,
-            SLG: slg,
-            OPS: ops,
             ISO: iso,
-            BB_K: bb_k
+            BB_K: bb_k,
+            GB_PCT: gb_pct * 100, // %表示用に100倍
+            FB_PCT: fb_pct * 100,
+            LD_PCT: ld_pct * 100
         };
     });
 }
@@ -223,19 +233,21 @@ function renderStatsTable() {
         return 0;
     });
 
-    // HTML生成
+    // HTML生成 (カラム定義を変更)
     const columns = [
         { k: 'Team', label: 'チーム' },
         { k: 'Name', label: '選手名' },
         { k: 'wRC_PLUS', label: 'wRC+', type: 'int', color: true },
-        { k: 'OPS', label: 'OPS', type: 'float3', color: true },
         { k: 'wOBA', label: 'wOBA', type: 'float3' },
-        { k: 'AVG', label: '打率', type: 'float3' },
+        { k: 'ISO', label: 'ISO', type: 'float3' },
+        // 新しいカラム
+        { k: 'GB_PCT', label: 'GB%', type: 'pct' },
+        { k: 'FB_PCT', label: 'FB%', type: 'pct' },
+        { k: 'LD_PCT', label: 'LD%', type: 'pct' },
+        
         { k: 'HR', label: 'HR', type: 'int' },
         { k: 'PA_CALC', label: '打席', type: 'int' },
-        { k: 'AB', label: '打数', type: 'int' },
         { k: 'H', label: '安打', type: 'int' },
-        { k: 'ISO', label: 'ISO', type: 'float3' },
         { k: 'BB_K', label: 'BB/K', type: 'float2' }
     ];
 
@@ -259,6 +271,7 @@ function renderStatsTable() {
                 if (c.type === 'float3') display = val.toFixed(3).replace(/^0/, '');
                 if (c.type === 'float2') display = val.toFixed(2);
                 if (c.type === 'int') display = Math.round(val);
+                if (c.type === 'pct') display = val.toFixed(1) + '%';
 
                 if (c.color) {
                     if (c.k === 'wRC_PLUS') {
@@ -266,11 +279,6 @@ function renderStatsTable() {
                         else if (val >= 140) cls = 'val-great';
                         else if (val >= 120) cls = 'val-good';
                         else if (val < 80) cls = 'val-bad';
-                    }
-                    if (c.k === 'OPS') {
-                        if (val >= 1.0) cls = 'val-elite';
-                        else if (val >= 0.9) cls = 'val-great';
-                        else if (val >= 0.8) cls = 'val-good';
                     }
                 }
 
