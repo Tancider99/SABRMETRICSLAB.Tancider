@@ -1,7 +1,65 @@
+// js/stats_logic.js の全文
+
+let currentStatsData = [];
+let sortCol = 'wRC_PLUS';
+let sortAsc = false;
+
+// 規定打席数 (143試合 * 3.1)
+const REGULATION_PA = 443; 
+
+document.addEventListener('DOMContentLoaded', () => {
+    // データが読み込まれていれば初期化
+    if (typeof NPB_STATS_DATA !== 'undefined') {
+        initStatsBoard();
+    } else {
+        console.warn("Stats data not found.");
+        const loading = document.getElementById('stats-loading');
+        if(loading) loading.textContent = "データがありません";
+    }
+});
+
+// ★タブ切り替え機能 (これが消えていたため反応しなかった)
+function switchView(viewName) {
+    // すべてのビューを非表示
+    document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
+    // すべてのタブの選択状態を解除
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    
+    // 対象のビューを表示
+    const targetView = document.getElementById(`view-${viewName}`);
+    if (targetView) targetView.style.display = 'block';
+    
+    // 対象のタブを選択状態にする
+    const targetTab = document.getElementById(`tab-${viewName}`);
+    if (targetTab) targetTab.classList.add('active');
+}
+
+function initStatsBoard() {
+    // 1. チームリストの生成
+    const teamSelect = document.getElementById('filter-team');
+    if (!teamSelect) return;
+
+    const teams = [...new Set(NPB_STATS_DATA.map(p => p.Team).filter(t => t))];
+    teams.forEach(t => {
+        const op = document.createElement('option');
+        op.value = t;
+        op.textContent = t;
+        teamSelect.appendChild(op);
+    });
+
+    // 2. データの加工と計算
+    calculateAdvancedStats();
+
+    // 3. 初回描画
+    const loading = document.getElementById('stats-loading');
+    if(loading) loading.style.display = 'none';
+    
+    renderStatsTable();
+}
+
 function calculateAdvancedStats() {
     // --- リーグ全体の合計値を算出 ---
     const total = NPB_STATS_DATA.reduce((acc, p) => {
-        // 日本語キーからデータを取得
         const pa = p['打席'] || 0;
         const h = p['安打'] || 0;
         const bb = p['四球'] || 0;
@@ -10,8 +68,8 @@ function calculateAdvancedStats() {
         const sh = p['犠打'] || 0;
         const hr = p['本塁打'] || 0;
         
-        // 打数 = 打席数 － (四死球 + 犠打 + 犠飛 + 打撃妨害 + 走塁妨害)
-        // ※データに打撃妨害・走塁妨害がないため0として計算
+        // 打数 = 打席数 － (四死球 + 犠打 + 犠飛)
+        // ※妨害系データがないため簡易計算
         const ab = pa - (bb + hbp + sh + sf);
 
         acc.PA += pa;
@@ -22,7 +80,6 @@ function calculateAdvancedStats() {
         acc.SF += sf;
         acc.HR += hr;
         
-        // wOBA計算用
         acc._2B += (p['二塁打'] || 0);
         acc._3B += (p['三塁打'] || 0);
         
@@ -30,24 +87,19 @@ function calculateAdvancedStats() {
     }, { PA:0, AB:0, H:0, BB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0 });
 
     // --- リーグ定数の計算 ---
-    // wOBA Scale (概算)
     const woba_scale = 1.24;
     
-    // リーグ平均 wOBA (Weightsは一般的な値を使用)
     const single = total.H - total._2B - total._3B - total.HR;
     const woba_numerator = (0.69 * total.BB) + (0.72 * total.HBP) + (0.89 * single) + (1.27 * total._2B) + (1.62 * total._3B) + (2.10 * total.HR);
     const woba_denominator = total.AB + total.BB + total.SF + total.HBP;
     
     const lg_woba = woba_denominator > 0 ? woba_numerator / woba_denominator : 0.320;
-    
-    // リーグ平均 R/PA (得点期待値、概算で0.12前後)
     const lg_r_pa = 0.12; 
 
     console.log(`League Constants: wOBA=${lg_woba.toFixed(3)}, R/PA=${lg_r_pa}`);
 
     // --- 各選手の指標計算 ---
     currentStatsData = NPB_STATS_DATA.map(p => {
-        // 日本語キーからデータを取得
         const pa = p['打席'] || 0;
         const h = p['安打'] || 0;
         const bb = p['四球'] || 0;
@@ -59,10 +111,7 @@ function calculateAdvancedStats() {
         const _3b = p['三塁打'] || 0;
         const so = p['三振'] || 0;
         
-        // 打数 = 打席数 － (四死球 + 犠打 + 犠飛 + 打撃妨害 + 走塁妨害)
-        // ※データに打撃妨害・走塁妨害がないため0として計算
         const ab = pa - (bb + hbp + sh + sf);
-        
         const single = h - _2b - _3b - hr;
         
         // wOBA
@@ -70,22 +119,16 @@ function calculateAdvancedStats() {
         const w_den = ab + bb + sf + hbp;
         const woba = w_den > 0 ? w_num / w_den : 0;
 
-        // wRAA = ((wOBA - lg_wOBA) / wOBA_Scale) * PA
+        // wRAA
         const wraa = woba_scale > 0 ? ((woba - lg_woba) / woba_scale) * pa : 0;
 
-        // wRC+ = (((wRAA/PA + lg_R/PA) + (lg_R/PA - PF*lg_R/PA)) / lg_R/PA) * 100
-        // PF(パークファクター)は1.0と仮定
+        // wRC+
         let wrc_plus = 0;
         if (pa > 0 && lg_r_pa > 0) {
-            const val = (((wraa / pa) + lg_r_pa) / lg_r_pa) * 100;
-            wrc_plus = val;
+            wrc_plus = (((wraa / pa) + lg_r_pa) / lg_r_pa) * 100;
         }
 
-        // その他の指標
-        const tb = h + _2b + (2*_3b) + (3*hr); // 塁打 (修正: 単打=1, 2B=2...) 
-        // 正確には TB = 1B + 2*2B + 3*3B + 4*HR = H + 2B + 2*3B + 3*HR
         const true_tb = h + _2b + (2*_3b) + (3*hr);
-
         const avg = ab > 0 ? h / ab : 0;
         const slg = ab > 0 ? true_tb / ab : 0;
         const obp = pa > 0 ? (h + bb + hbp) / pa : 0;
@@ -95,12 +138,9 @@ function calculateAdvancedStats() {
 
         return {
             ...p,
-            // 英語キーを追加 (テーブル描画用)
             AB: ab,
             H: h,
             HR: hr,
-            
-            // 計算指標
             PA_CALC: pa,
             wOBA: woba,
             wRC_PLUS: wrc_plus,
@@ -112,4 +152,109 @@ function calculateAdvancedStats() {
             BB_K: bb_k
         };
     });
+}
+
+function renderStatsTable() {
+    const tbody = document.getElementById('leaderboard');
+    if (!tbody) return;
+
+    const searchInput = document.getElementById('stats-search');
+    const teamSelect = document.getElementById('filter-team');
+    const paInput = document.getElementById('filter-pa');
+    const regCheck = document.getElementById('filter-regulation');
+
+    const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+    const teamVal = teamSelect ? teamSelect.value : '';
+    const userPaVal = paInput ? (parseInt(paInput.value) || 0) : 0;
+    const isReg = regCheck ? regCheck.checked : true;
+
+    // フィルタリング
+    let data = currentStatsData.filter(p => {
+        const matchName = !searchVal || p.Name.toLowerCase().includes(searchVal);
+        const matchTeam = !teamVal || p.Team === teamVal;
+        const limit = isReg ? REGULATION_PA : userPaVal;
+        const matchPA = p.PA_CALC >= limit;
+        return matchName && matchTeam && matchPA;
+    });
+
+    // ソート
+    data.sort((a, b) => {
+        let va = a[sortCol];
+        let vb = b[sortCol];
+        if (typeof va === 'undefined') va = -9999;
+        if (typeof vb === 'undefined') vb = -9999;
+
+        if (va < vb) return sortAsc ? -1 : 1;
+        if (va > vb) return sortAsc ? 1 : -1;
+        return 0;
+    });
+
+    // HTML生成
+    const columns = [
+        { k: 'Team', label: 'チーム' },
+        { k: 'Name', label: '選手名' },
+        { k: 'wRC_PLUS', label: 'wRC+', type: 'int', color: true },
+        { k: 'OPS', label: 'OPS', type: 'float3', color: true },
+        { k: 'wOBA', label: 'wOBA', type: 'float3' },
+        { k: 'AVG', label: '打率', type: 'float3' },
+        { k: 'HR', label: 'HR', type: 'int' },
+        { k: 'PA_CALC', label: '打席', type: 'int' },
+        { k: 'AB', label: '打数', type: 'int' },
+        { k: 'H', label: '安打', type: 'int' },
+        { k: 'ISO', label: 'ISO', type: 'float3' },
+        { k: 'BB_K', label: 'BB/K', type: 'float2' }
+    ];
+
+    let html = '<thead><tr>';
+    columns.forEach(c => {
+        const mark = sortCol === c.k ? (sortAsc ? '▲' : '▼') : '';
+        html += `<th onclick="changeSort('${c.k}')">${c.label} ${mark}</th>`;
+    });
+    html += '</tr></thead><tbody>';
+
+    if (data.length === 0) {
+        html += '<tr><td colspan="12" style="text-align:center; padding:20px;">該当する選手がいません</td></tr>';
+    } else {
+        data.forEach(row => {
+            html += '<tr>';
+            columns.forEach(c => {
+                let val = row[c.k];
+                let display = val;
+                let cls = '';
+
+                if (c.type === 'float3') display = val.toFixed(3).replace(/^0/, '');
+                if (c.type === 'float2') display = val.toFixed(2);
+                if (c.type === 'int') display = Math.round(val);
+
+                if (c.color) {
+                    if (c.k === 'wRC_PLUS') {
+                        if (val >= 160) cls = 'val-elite';
+                        else if (val >= 140) cls = 'val-great';
+                        else if (val >= 120) cls = 'val-good';
+                        else if (val < 80) cls = 'val-bad';
+                    }
+                    if (c.k === 'OPS') {
+                        if (val >= 1.0) cls = 'val-elite';
+                        else if (val >= 0.9) cls = 'val-great';
+                        else if (val >= 0.8) cls = 'val-good';
+                    }
+                }
+
+                html += `<td class="${cls}">${display}</td>`;
+            });
+            html += '</tr>';
+        });
+    }
+    html += '</tbody>';
+
+    tbody.innerHTML = html;
+}
+
+function changeSort(key) {
+    if (sortCol === key) sortAsc = !sortAsc;
+    else {
+        sortCol = key;
+        sortAsc = false;
+    }
+    renderStatsTable();
 }
