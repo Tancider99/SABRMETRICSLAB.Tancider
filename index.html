@@ -46,6 +46,37 @@
         </div>
     </header>
 
+    <nav class="main-nav">
+        <button class="nav-tab active" onclick="switchView('dictionary')" id="tab-dict">
+            <span>📖</span> 指標辞書 / 計算機
+        </button>
+        <button class="nav-tab" onclick="switchView('stats')" id="tab-stats">
+            <span>📊</span> 成績リーダーボード
+        </button>
+    </nav>
+    
+    <div id="view-dictionary" class="view-section active">
+        <div class="grid-container" id="grid"></div>
+    </div>
+    
+    <div id="view-stats" class="view-section" style="display:none;">
+        <div class="stats-container">
+            <div class="stats-controls">
+                <input type="text" id="stats-search" placeholder="選手名で検索..." oninput="renderStatsTable()">
+                <div class="stats-filter">
+                    <label><input type="checkbox" id="filter-regulation" onchange="renderStatsTable()"> 規定打席のみ</label>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="leaderboard-table" id="leaderboard">
+                    </table>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/stats_db.js"></script>
+    <script src="js/stats_logic.js"></script> ```
+
     <div style="max-width: 1200px; margin: 0 auto; padding: 50px 2rem 0;">
         <details class="footer-details" style="border-color: var(--cat-bat); background: var(--bg-bat); margin-bottom: 20px;">
             <summary class="footer-summary" style="font-weight:800; color:var(--cat-bat);">
