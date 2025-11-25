@@ -1,122 +1,34 @@
 // js/stats_logic.js
 
 let currentStatsData = [];
-let leagueStats = {}; // リーグ全体の計算用定数
-let sortCol = 'wRC_PLUS'; // デフォルトソート
+let sortCol = 'wRC_PLUS';
 let sortAsc = false;
 
+// 規定打席数 (143試合 * 3.1)
+const REGULATION_PA = 443; 
+
 document.addEventListener('DOMContentLoaded', () => {
+    // データが読み込まれていれば初期化
     if (typeof NPB_STATS_DATA !== 'undefined') {
         initStatsBoard();
+    } else {
+        console.warn("Stats data not found.");
+        document.getElementById('stats-loading').textContent = "データがありません";
     }
 });
 
-function initStatsBoard() {
-    calculateLeagueConstants(); // 1. リーグ全体定数の計算
-    processData();              // 2. 個人成績の計算 (wRC+含む)
-    setupFilters();             // 3. フィルタの準備
-    renderStatsTable();         // 4. 表示
-}
-
-// ビュー切り替え
 function switchView(viewName) {
+    // タブの切り替え表示
     document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
-    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     
     document.getElementById(`view-${viewName}`).style.display = 'block';
     document.getElementById(`tab-${viewName}`).classList.add('active');
 }
 
-// 1. リーグ定数の計算 (wRC+用)
-function calculateLeagueConstants() {
-    // 全選手の数値を合算
-    const total = NPB_STATS_DATA.reduce((acc, p) => {
-        acc.PA += p.AB + (p.BB||0) + (p.HBP||0) + (p.SF||0) + (p.SH||0); // 簡易PA計算
-        acc.AB += p.AB;
-        acc.H += p.H;
-        acc.BB += (p.BB||0);
-        acc.HBP += (p.HBP||0);
-        acc.SF += (p.SF||0);
-        return acc;
-    }, { PA:0, AB:0, H:0, BB:0, HBP:0, SF:0 });
-
-    // wOBA係数 (概算値: 年によって異なるが、一般的な係数を使用)
-    // wRC+計算に必要な定数: lg_wOBA, wOBA_Scale, lg_R/PA
-    
-    // 簡易的なリーグ平均出塁率などを計算
-    const lg_obp = (total.H + total.BB + total.HBP) / (total.AB + total.BB + total.HBP + total.SF);
-    
-    // wOBA Scale (概算 1.24)
-    const woba_scale = 1.24;
-    
-    // リーグwOBA (簡易計算)
-    // 正確な係数は年度ごとに異なりますが、ここでは標準的な値を使用
-    const woba_num = (0.69 * (total.BB)) + (0.72 * total.HBP) + (0.89 * (total.H - (NPB_STATS_DATA.reduce((s,p)=>s+(p['2B']||0)+(p['3B']||0)+(p['HR']||0),0)))) + (1.27 * NPB_STATS_DATA.reduce((s,p)=>s+(p['2B']||0),0)) + (1.62 * NPB_STATS_DATA.reduce((s,p)=>s+(p['3B']||0),0)) + (2.10 * NPB_STATS_DATA.reduce((s,p)=>s+(p['HR']||0),0));
-    const lg_woba = woba_num / (total.AB + total.BB - (NPB_STATS_DATA.reduce((s,p)=>s+(p.IBB||0),0)) + total.SF + total.HBP);
-
-    // リーグ R/PA (およそ 0.11 ~ 0.13)
-    // 得点データがない場合、wOBAから推定するか、標準値を使う
-    const lg_r_pa = 0.12; 
-
-    leagueStats = { lg_woba, woba_scale, lg_r_pa };
-    console.log("League Constants:", leagueStats);
-}
-
-// 2. データ加工・指標計算
-function processData() {
-    const { lg_woba, woba_scale, lg_r_pa } = leagueStats;
-
-    currentStatsData = NPB_STATS_DATA.map(p => {
-        // 必要なデータの整理
-        const PA = p.AB + (p.BB||0) + (p.HBP||0) + (p.SF||0) + (p.SH||0);
-        const S = p.H - (p['2B']||0) - (p['3B']||0) - (p['HR']||0);
-        const TB = S + (2*(p['2B']||0)) + (3*(p['3B']||0)) + (4*(p['HR']||0));
-        const IBB = p.IBB || 0;
-
-        // wOBA計算
-        const woba_demon = p.AB + p.BB - IBB + (p.HBP||0) + (p.SF||0);
-        const woba_num = (0.69 * (p.BB - IBB)) + (0.72 * (p.HBP||0)) + (0.89 * S) + (1.27 * (p['2B']||0)) + (1.62 * (p['3B']||0)) + (2.10 * (p['HR']||0));
-        const woba = woba_demon > 0 ? woba_num / woba_demon : 0;
-
-        // wRAA計算
-        const wraa = ((woba - lg_woba) / woba_scale) * PA;
-
-        // wRC+計算 (パークファクターは今回考慮せず1.0とする)
-        // wRC+ = (((wRAA/PA + lg_R/PA) + (lg_R/PA - PF*lg_R/PA)) / lg_R/PA) * 100
-        // 簡易版: ((wRAA / PA) + lg_R_PA) / lg_R_PA * 100
-        let wrc_plus = 0;
-        if (PA > 0) {
-            wrc_plus = (((wraa / PA) + lg_r_pa) / lg_r_pa) * 100;
-        }
-
-        // その他の指標
-        const avg = p.AB > 0 ? p.H / p.AB : 0;
-        const obp = (p.AB + p.BB + (p.HBP||0) + (p.SF||0)) > 0 ? (p.H + p.BB + (p.HBP||0)) / (p.AB + p.BB + (p.HBP||0) + (p.SF||0)) : 0;
-        const slg = p.AB > 0 ? TB / p.AB : 0;
-        const ops = obp + slg;
-        const iso = slg - avg;
-        const bb_k = (p.SO||0) > 0 ? p.BB / p.SO : 0;
-
-        return {
-            ...p,
-            PA, TB,
-            AVG: avg,
-            OBP: obp,
-            SLG: slg,
-            OPS: ops,
-            ISO: iso,
-            wOBA: woba,
-            wRAA: wraa,
-            wRC_PLUS: wrc_plus,
-            BB_K: bb_k
-        };
-    });
-}
-
-// 3. フィルタのセットアップ
-function setupFilters() {
+function initStatsBoard() {
+    // 1. チームリストの生成
     const teamSelect = document.getElementById('filter-team');
-    // チームリストの作成
     const teams = [...new Set(NPB_STATS_DATA.map(p => p.Team).filter(t => t))];
     teams.forEach(t => {
         const op = document.createElement('option');
@@ -124,38 +36,150 @@ function setupFilters() {
         op.textContent = t;
         teamSelect.appendChild(op);
     });
+
+    // 2. データの加工と計算
+    calculateAdvancedStats();
+
+    // 3. 初回描画
+    document.getElementById('stats-loading').style.display = 'none';
+    renderStatsTable();
 }
 
-// 4. テーブル描画
+function calculateAdvancedStats() {
+    // --- リーグ全体の合計値を算出 ---
+    const total = NPB_STATS_DATA.reduce((acc, p) => {
+        // データにない項目は0として扱う
+        const ab = p.AB || 0;
+        const bb = p.BB || 0;
+        const hbp = p.HBP || 0; // CSVにないかも
+        const sf = p.SF || 0;   // CSVにないかも
+        const h = p.H || 0;
+        const hr = p.HR || 0;
+        
+        // 簡易PA (HBP, SFがない場合は AB+BB)
+        const pa = ab + bb + hbp + sf;
+
+        acc.PA += pa;
+        acc.AB += ab;
+        acc.H += h;
+        acc.BB += bb;
+        acc.HBP += hbp;
+        acc.SF += sf;
+        acc.HR += hr;
+        
+        // wOBA計算用 (2B, 3Bがあれば精度向上)
+        acc._2B += (p['2B'] || 0);
+        acc._3B += (p['3B'] || 0);
+        
+        return acc;
+    }, { PA:0, AB:0, H:0, BB:0, HBP:0, SF:0, HR:0, _2B:0, _3B:0 });
+
+    // --- リーグ定数の計算 ---
+    // wOBA Scale (概算)
+    const woba_scale = 1.24;
+    
+    // リーグ平均 wOBA (Weightsは一般的な値を使用)
+    // wOBA = (0.69×BB + 0.72×HBP + 0.89×1B + 1.27×2B + 1.62×3B + 2.10×HR) / (AB + BB - IBB + SF + HBP)
+    // ※ IBBが不明な場合はBBで代用、HBP/SFがない場合は無視
+    const single = total.H - total._2B - total._3B - total.HR;
+    const woba_numerator = (0.69 * total.BB) + (0.72 * total.HBP) + (0.89 * single) + (1.27 * total._2B) + (1.62 * total._3B) + (2.10 * total.HR);
+    const woba_denominator = total.AB + total.BB + total.SF + total.HBP;
+    
+    const lg_woba = woba_denominator > 0 ? woba_numerator / woba_denominator : 0.320;
+    
+    // リーグ平均 R/PA (得点期待値、概算で0.12前後)
+    // 本来は総得点/総打席だが、得点データがない場合はwOBAから推定
+    const lg_r_pa = 0.12; 
+
+    console.log(`League Constants: wOBA=${lg_woba.toFixed(3)}, R/PA=${lg_r_pa}`);
+
+    // --- 各選手の指標計算 ---
+    currentStatsData = NPB_STATS_DATA.map(p => {
+        const ab = p.AB || 0;
+        const h = p.H || 0;
+        const bb = p.BB || 0;
+        const hbp = p.HBP || 0;
+        const sf = p.SF || 0;
+        const hr = p.HR || 0;
+        const _2b = p['2B'] || 0;
+        const _3b = p['3B'] || 0;
+        const single = h - _2b - _3b - hr;
+        
+        // PA (打席数)
+        const pa = ab + bb + hbp + sf;
+        
+        // wOBA
+        const w_num = (0.69 * bb) + (0.72 * hbp) + (0.89 * single) + (1.27 * _2b) + (1.62 * _3b) + (2.10 * hr);
+        const w_den = ab + bb + sf + hbp; // IBBがあれば除くべきだが簡易化
+        const woba = w_den > 0 ? w_num / w_den : 0;
+
+        // wRAA = ((wOBA - lg_wOBA) / wOBA_Scale) * PA
+        const wraa = woba_scale > 0 ? ((woba - lg_woba) / woba_scale) * pa : 0;
+
+        // wRC+ = (((wRAA/PA + lg_R/PA) + (lg_R/PA - PF*lg_R/PA)) / lg_R/PA) * 100
+        // PF(パークファクター)は1.0と仮定
+        let wrc_plus = 0;
+        if (pa > 0 && lg_r_pa > 0) {
+            const val = (((wraa / pa) + lg_r_pa) / lg_r_pa) * 100;
+            wrc_plus = val;
+        }
+
+        // その他の指標
+        const tb = h + _2b + (2*_3b) + (3*hr); // 塁打 (修正: 単打=1, 2B=2...) 
+        // 正確には TB = 1B + 2*2B + 3*3B + 4*HR = H + 2B + 2*3B + 3*HR
+        const true_tb = h + _2b + (2*_3b) + (3*hr);
+
+        const avg = ab > 0 ? h / ab : 0;
+        const slg = ab > 0 ? true_tb / ab : 0;
+        const obp = pa > 0 ? (h + bb + hbp) / pa : 0;
+        const ops = obp + slg;
+        const iso = slg - avg;
+        const bb_k = (p.SO || 0) > 0 ? bb / p.SO : 0;
+
+        return {
+            ...p,
+            PA_CALC: pa, // 計算したPA
+            wOBA: woba,
+            wRC_PLUS: wrc_plus,
+            AVG: avg,
+            OBP: obp,
+            SLG: slg,
+            OPS: ops,
+            ISO: iso,
+            BB_K: bb_k
+        };
+    });
+}
+
 function renderStatsTable() {
     const tbody = document.getElementById('leaderboard');
     const searchVal = document.getElementById('stats-search').value.toLowerCase();
     const teamVal = document.getElementById('filter-team').value;
-    const paVal = parseInt(document.getElementById('filter-pa').value) || 0;
+    const userPaVal = parseInt(document.getElementById('filter-pa').value) || 0;
     const isReg = document.getElementById('filter-regulation').checked;
-
-    // 規定打席の概算 (例: 143試合 * 3.1 = 443)
-    // シーズン途中なら少なく調整する必要があります
-    const REGULATION_PA = 443; 
 
     // フィルタリング
     let data = currentStatsData.filter(p => {
-        // 文字列検索
-        const matchText = !searchVal || p.Name.toLowerCase().includes(searchVal);
-        // チーム
+        // 1. 名前検索
+        const matchName = !searchVal || p.Name.toLowerCase().includes(searchVal);
+        // 2. チーム検索
         const matchTeam = !teamVal || p.Team === teamVal;
-        // 打席数指定
-        const matchPA = p.PA >= paVal;
-        // 規定打席チェック
-        const matchReg = !isReg || p.PA >= REGULATION_PA;
+        
+        // 3. 打席数フィルタ
+        // 規定打席チェックがONなら REGULATION_PA、OFFなら userPaVal を下限にする
+        const limit = isReg ? REGULATION_PA : userPaVal;
+        const matchPA = p.PA_CALC >= limit;
 
-        return matchText && matchTeam && matchPA && matchReg;
+        return matchName && matchTeam && matchPA;
     });
 
     // ソート
     data.sort((a, b) => {
         let va = a[sortCol];
         let vb = b[sortCol];
+        if (typeof va === 'undefined') va = -9999;
+        if (typeof vb === 'undefined') vb = -9999;
+
         if (va < vb) return sortAsc ? -1 : 1;
         if (va > vb) return sortAsc ? 1 : -1;
         return 0;
@@ -165,16 +189,16 @@ function renderStatsTable() {
     const columns = [
         { k: 'Team', label: 'チーム' },
         { k: 'Name', label: '選手名' },
-        { k: 'wRC_PLUS', label: 'wRC+', type: 'float0', color: true }, // 整数
-        { k: 'wOBA', label: 'wOBA', type: 'float3' },
+        { k: 'wRC_PLUS', label: 'wRC+', type: 'int', color: true },
         { k: 'OPS', label: 'OPS', type: 'float3', color: true },
+        { k: 'wOBA', label: 'wOBA', type: 'float3' },
         { k: 'AVG', label: '打率', type: 'float3' },
-        { k: 'HR', label: 'HR' },
-        { k: 'PA', label: '打席' },
-        { k: 'H', label: '安打' },
+        { k: 'HR', label: 'HR', type: 'int' },
+        { k: 'PA_CALC', label: '打席', type: 'int' },
+        { k: 'AB', label: '打数', type: 'int' },
+        { k: 'H', label: '安打', type: 'int' },
         { k: 'ISO', label: 'ISO', type: 'float3' },
-        { k: 'BB_K', label: 'BB/K', type: 'float2' },
-        { k: 'SB', label: '盗塁' }, // データにあれば
+        { k: 'BB_K', label: 'BB/K', type: 'float2' }
     ];
 
     let html = '<thead><tr>';
@@ -184,36 +208,40 @@ function renderStatsTable() {
     });
     html += '</tr></thead><tbody>';
 
-    data.forEach(row => {
-        html += '<tr>';
-        columns.forEach(c => {
-            let val = row[c.k];
-            let displayVal = val;
-            let cls = '';
+    if (data.length === 0) {
+        html += '<tr><td colspan="12" style="text-align:center; padding:20px;">該当する選手がいません</td></tr>';
+    } else {
+        data.forEach(row => {
+            html += '<tr>';
+            columns.forEach(c => {
+                let val = row[c.k];
+                let display = val;
+                let cls = '';
 
-            if (c.type === 'float3') displayVal = val.toFixed(3).replace(/^0/,'');
-            if (c.type === 'float2') displayVal = val.toFixed(2);
-            if (c.type === 'float0') displayVal = val.toFixed(0);
+                if (c.type === 'float3') display = val.toFixed(3).replace(/^0/, '');
+                if (c.type === 'float2') display = val.toFixed(2);
+                if (c.type === 'int') display = Math.round(val);
 
-            // 色付け
-            if (c.color) {
-                if (c.k === 'wRC_PLUS') {
-                    if (val >= 160) cls = 'val-elite';
-                    else if (val >= 140) cls = 'val-great';
-                    else if (val >= 120) cls = 'val-good';
-                    else if (val < 80) cls = 'val-bad';
+                // 色付けロジック
+                if (c.color) {
+                    if (c.k === 'wRC_PLUS') {
+                        if (val >= 160) cls = 'val-elite';
+                        else if (val >= 140) cls = 'val-great';
+                        else if (val >= 120) cls = 'val-good';
+                        else if (val < 80) cls = 'val-bad';
+                    }
+                    if (c.k === 'OPS') {
+                        if (val >= 1.0) cls = 'val-elite';
+                        else if (val >= 0.9) cls = 'val-great';
+                        else if (val >= 0.8) cls = 'val-good';
+                    }
                 }
-                if (c.k === 'OPS') {
-                    if (val >= 1.0) cls = 'val-elite';
-                    else if (val >= 0.9) cls = 'val-great';
-                    else if (val >= 0.8) cls = 'val-good';
-                }
-            }
 
-            html += `<td class="${cls}">${displayVal}</td>`;
+                html += `<td class="${cls}">${display}</td>`;
+            });
+            html += '</tr>';
         });
-        html += '</tr>';
-    });
+    }
     html += '</tbody>';
 
     tbody.innerHTML = html;
