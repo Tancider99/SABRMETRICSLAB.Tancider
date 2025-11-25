@@ -546,7 +546,7 @@ header {
     border-color: var(--ai-color);
 }
 .calc-container.ai-mode .calc-title span { color: var(--ai-color); }
-.calc-container.ai-mode .calc-btn { background: var(--ai-color); }
+.calc-container.ai-mode .calc-btn { background: #7c3aed; opacity: 0.9;  }
 .calc-container.ai-mode .calc-btn:hover { background: #7c3aed; opacity: 0.9; }
 .calc-container.ai-mode .calc-res-value { color: var(--ai-color); }
 
