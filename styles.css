@@ -1456,3 +1456,30 @@ header {
     color: var(--c-text-secondary);
     text-align: right;
 }
+/* Tab Icons */
+.tab-icon {
+    margin-right: 6px;
+    vertical-align: text-bottom;
+    opacity: 0.8;
+}
+.tab-btn.active .tab-icon {
+    opacity: 1;
+}
+
+/* Search Icon in Stats */
+.search-icon-small {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--c-text-secondary);
+    pointer-events: none;
+}
+
+/* Table Sort Icons */
+.leaderboard-table th svg {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 4px;
+    opacity: 0.6;
+}
