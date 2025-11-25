@@ -150,20 +150,25 @@ function calculateAdvancedStats() {
         const fb_pct = total_batted > 0 ? (raw_fb / total_batted) * 100 : 0;
         const ld_pct = total_batted > 0 ? (raw_ld / total_batted) * 100 : 0;
 
-        // ISO
+        // ISO, OPS, BB%, K%
         const true_tb = h + _2b + (2*_3b) + (3*hr);
         const slg = ab > 0 ? true_tb / ab : 0;
+        const obp_denom = ab + bb + hbp + sf;
+        const obp = obp_denom > 0 ? (h + bb + hbp) / obp_denom : 0;
+        const ops = obp + slg;
+        
         const avg = ab > 0 ? h / ab : 0;
         const iso = slg - avg;
 
-        // K% (K_PCT)
         const k_pct_val = pa > 0 ? (so / pa) * 100 : 0;
+        const bb_pct_val = pa > 0 ? (bb / pa) * 100 : 0;
 
         return {
             ...p,
             H: h, HR: hr, PA_CALC: pa,
             wOBA: woba, wRC_PLUS: wrc_plus, ISO: iso,
-            K_PCT: k_pct_val,
+            OPS: ops,
+            K_PCT: k_pct_val, BB_PCT: bb_pct_val,
             GB_PCT: gb_pct, FB_PCT: fb_pct, LD_PCT: ld_pct
         };
     });
@@ -201,20 +206,20 @@ function renderStatsTable() {
         return 0;
     });
 
-    // カラム定義 (BB_K -> K_PCTに変更)
+    // カラム定義 (OPS, BB%追加、並び替え)
     const columns = [
         { k: 'Team', label: 'チーム' },
         { k: 'Name', label: '選手名' },
-        { k: 'wRC_PLUS', label: '推定wRC+', type: 'int', color: true },
-        { k: 'wOBA', label: '推定wOBA', type: 'float3' },
-        { k: 'ISO', label: 'ISO', type: 'float3' },
-        { k: 'GB_PCT', label: '推定GB%', type: 'pct' },
-        { k: 'FB_PCT', label: '推定FB%', type: 'pct' },
+        { k: 'PA_CALC', label: '打席', type: 'int' }, // 母数
+        { k: 'OPS', label: 'OPS', type: 'float3' }, // 総合2
+        { k: 'ISO', label: 'ISO', type: 'float3' }, // パワー
+        { k: 'K_PCT', label: 'K%', type: 'pct' }, // コンタクト
+        { k: 'BB_PCT', label: 'BB%', type: 'pct' }, // 選球眼
         { k: 'LD_PCT', label: '推定LD%', type: 'pct' },
-        { k: 'HR', label: 'HR', type: 'int' },
-        { k: 'PA_CALC', label: '打席', type: 'int' },
-        { k: 'H', label: '安打', type: 'int' },
-        { k: 'K_PCT', label: 'K%', type: 'pct' } // K%に変更
+        { k: 'GB_PCT', label: '推定GB%', type: 'pct' }, // 打球傾向
+        { k: 'FB_PCT', label: '推定FB%', type: 'pct' },
+        { k: 'wOBA', label: '推定wOBA', type: 'float3' }, // 総合3
+        { k: 'wRC_PLUS', label: '推定wRC+', type: 'int', color: true }, // 最重要
     ];
 
     let html = '<thead><tr>';
