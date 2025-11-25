@@ -27,7 +27,8 @@ function processData() {
     // 計算に必要なキーのマッピング (DBのキー -> termsのinput ID)
     const keyMap = {
         'PA': 'pa', 'AB': 'ab', 'H': 'h', '2B': 'd', '3B': 't', 'HR': 'hr',
-        'BB': 'bb', 'HBP': 'hbp', 'SF': 'sf', 'SH': 'sh', 'SO': 'so'
+        'BB': 'bb', 'IBB': 'ibb', // ★ここを追加 (CSVのIBB列を計算機のibb変数にマッピング)
+        'HBP': 'hbp', 'SF': 'sf', 'SH': 'sh', 'SO': 'so'
     };
 
     currentStatsData = NPB_STATS_DATA.map(player => {
