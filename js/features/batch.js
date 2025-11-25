@@ -184,19 +184,20 @@ function runParser(text, mode) {
     msg.style.display = 'block';
     if (count > 0) {
         msg.innerHTML = `
-            <div style="color:var(--cat-tot); font-weight:bold;">
-                ${icons.sparkle} 解析完了: ${count} 項目を抽出しました
+            <div style="color:var(--cat-tot); font-weight:bold; display:flex; align-items:center; justify-content:center; gap:8px;">
+                ${icons.sparkle} <span>解析完了: ${count} 項目を抽出しました</span>
             </div>
-            <div style="font-size:0.8em; color:var(--c-text-secondary);">
+            <div style="font-size:0.8em; color:var(--c-text-secondary); margin-top:4px;">
                 検出: ${extractedInfo.join(', ')}${extractedInfo.length>=6 ? '...' : ''}
             </div>
         `;
     } else {
+        // ❌ -> icons.alert
         msg.innerHTML = `
-            <div style="color:#ef4444;">
-                ❌ データが見つかりませんでした。<br>
-                「打率.300 本塁打20」のように項目名と数字が含まれるテキストを貼り付けてください。
+            <div style="color:#ef4444; display:flex; align-items:center; justify-content:center; gap:8px;">
+                ${icons.alert} <span>データが見つかりませんでした。</span>
             </div>
+            <div style="font-size:0.8em; margin-top:4px;">「打率.300 本塁打20」のように項目名と数字が含まれるテキストを貼り付けてください。</div>
         `;
     }
 }
